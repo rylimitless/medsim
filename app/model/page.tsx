@@ -1,47 +1,46 @@
 "use client";
 
-import React, { Suspense, useEffect, useRef } from "react";
-import { Canvas, useFrame, useLoader, useThree } from "@react-three/fiber";
+import React, { Suspense, useEffect, useRef, useCallback } from "react";
+import { Canvas, useLoader } from "@react-three/fiber";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import type { ThreeEvent } from "@react-three/fiber";
 
-function Controls() {
-  const { camera, gl } = useThree();
-  const controlsRef = useRef<OrbitControls | null>(null);
+function useRotationControls(
+  targetRef: React.RefObject<THREE.Object3D | null>,
+) {
+  const applyRotation = useCallback(
+    (dx: number, dy: number) => {
+      const target = targetRef.current;
+      if (!target) return;
 
-  useEffect(() => {
-    const controls = new OrbitControls(camera, gl.domElement);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.08;
-    controls.enableZoom = true;
-    controls.enablePan = false;
-    controls.target.set(0, 0, 0);
-    controls.update();
+      target.rotation.y += dx * 0.01;
+      target.rotation.x += dy * 0.01;
 
-    controlsRef.current = controls;
+      target.rotation.x = THREE.MathUtils.clamp(
+        target.rotation.x,
+        -Math.PI / 2,
+        Math.PI / 2,
+      );
+    },
+    [targetRef],
+  );
 
-    return () => {
-      controls.dispose();
-      controlsRef.current = null;
-    };
-  }, [camera, gl]);
-
-  useFrame(() => {
-    controlsRef.current?.update();
-  });
-
-  return null;
+  return { applyRotation };
 }
 
 function Model() {
   const gltf = useLoader(GLTFLoader, "/model/model2.glb");
-  const ref = useRef<THREE.Object3D>(null);
+  const groupRef = useRef<THREE.Group>(null);
+  const dragging = useRef(false);
+  const last = useRef({ x: 0, y: 0 });
+
+  const { applyRotation } = useRotationControls(groupRef);
 
   useEffect(() => {
-    if (!ref.current) return;
+    if (!gltf.scene) return;
 
-    const box = new THREE.Box3().setFromObject(ref.current);
+    const box = new THREE.Box3().setFromObject(gltf.scene);
     const size = new THREE.Vector3();
     const center = new THREE.Vector3();
 
@@ -51,11 +50,41 @@ function Model() {
     const maxDim = Math.max(size.x, size.y, size.z);
     const scale = 1.5 / maxDim;
 
-    ref.current.scale.setScalar(scale);
-    ref.current.position.sub(center.multiplyScalar(scale));
+    gltf.scene.scale.setScalar(scale);
+    gltf.scene.position.sub(center.multiplyScalar(scale));
   }, [gltf]);
 
-  return <primitive ref={ref} object={gltf.scene} />;
+  const onPointerDown = (e: ThreeEvent<PointerEvent>) => {
+    dragging.current = true;
+    last.current = { x: e.clientX, y: e.clientY };
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  };
+
+  const onPointerMove = (e: ThreeEvent<PointerEvent>) => {
+    if (!dragging.current) return;
+    const dx = e.clientX - last.current.x;
+    const dy = e.clientY - last.current.y;
+
+    applyRotation(dx, dy);
+
+    last.current = { x: e.clientX, y: e.clientY };
+  };
+
+  const onPointerUp = (e: ThreeEvent<PointerEvent>) => {
+    dragging.current = false;
+    (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+  };
+
+  return (
+    <group
+      ref={groupRef}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+    >
+      <primitive object={gltf.scene} />
+    </group>
+  );
 }
 
 export default function ModelPage() {
@@ -70,7 +99,6 @@ export default function ModelPage() {
         <hemisphereLight args={["#ffffff", "#bdbdbd", 0.8]} />
         <directionalLight position={[3, 3, 3]} intensity={1.2} />
 
-        <Controls />
         <Suspense fallback={null}>
           <Model />
         </Suspense>
