@@ -216,6 +216,7 @@ function HandMesh({
   connectionRadius = 0.008,
   pointColor = "#ff3b3b",
   lineColor = "#30ff54",
+  isCameraMoving = false,
 }: {
   handIndex: number;
   landmarksRef: React.MutableRefObject<NormalizedLandmark[][]>;
@@ -235,6 +236,7 @@ function HandMesh({
   connectionRadius?: number;
   pointColor?: string;
   lineColor?: string;
+  isCameraMoving?: boolean;
 }) {
   const pointsRef = useRef<THREE.InstancedMesh>(null);
   const connectionsRef = useRef<THREE.InstancedMesh>(null);
@@ -344,9 +346,12 @@ function HandMesh({
       handednessEntry?.[0]?.categoryName ??
       handednessEntry?.[0]?.displayName ??
       "";
-    const allowCutting = handednessLabel
+    const isLeftHand = handednessLabel
       ? handednessLabel === "Left"
       : handIndex === 0;
+    const baseAllowCutting = isLeftHand;
+    const showLeftHandMode = isLeftHand;
+    const allowCutting = baseAllowCutting && !isCameraMoving;
     const shouldCheckModel = allowCutting;
     const hasModel = Boolean(model && meshes.length > 0);
     if (hasModel && shouldCheckModel) {
@@ -428,7 +433,7 @@ function HandMesh({
     }
 
     if (scalpelLabelRef.current) {
-      const shouldShowLabel = allowCutting && Boolean(landmarks[5]);
+      const shouldShowLabel = showLeftHandMode && Boolean(landmarks[5]);
       scalpelLabelRef.current.visible =
         shouldShowLabel && Boolean(scalpelLabelTexture);
       if (scalpelLabelRef.current.visible) {
@@ -615,7 +620,8 @@ function HandMesh({
     }
 
     for (let i = 0; i < LANDMARK_COUNT; i += 1) {
-      const isVisible = !allowCutting || LEFT_HAND_VISIBLE_INDICES.includes(i);
+      const isVisible =
+        !showLeftHandMode || LEFT_HAND_VISIBLE_INDICES.includes(i);
       dummy.position.copy(worldPositions[i]);
       dummy.scale.setScalar(isVisible ? 1 : 0);
       dummy.updateMatrix();
@@ -633,7 +639,7 @@ function HandMesh({
       const length = tempDir.length();
 
       const showConnection =
-        !allowCutting ||
+        !showLeftHandMode ||
         (LEFT_HAND_VISIBLE_INDICES.includes(a) &&
           LEFT_HAND_VISIBLE_INDICES.includes(b));
 
@@ -726,8 +732,14 @@ function CutLines({
       positions[idx + 2] = p.z;
     }
 
+    let attr = geom.getAttribute("position") as
+      | THREE.BufferAttribute
+      | undefined;
+    if (!attr) {
+      attr = new THREE.BufferAttribute(positions, 3);
+      geom.setAttribute("position", attr);
+    }
     geom.setDrawRange(0, count);
-    const attr = geom.getAttribute("position") as THREE.BufferAttribute;
     attr.needsUpdate = true;
   });
 
@@ -748,6 +760,7 @@ function HandSkeleton3D({
   meshListRef,
   tooltipRef,
   tooltipStateRef,
+  isCameraMoving,
 }: {
   landmarksRef: React.MutableRefObject<NormalizedLandmark[][]>;
   handednessRef: React.MutableRefObject<HandednessList>;
@@ -757,6 +770,7 @@ function HandSkeleton3D({
   meshListRef: React.MutableRefObject<THREE.Object3D[]>;
   tooltipRef: React.RefObject<HTMLDivElement | null>;
   tooltipStateRef: React.MutableRefObject<TooltipState>;
+  isCameraMoving: boolean;
 }) {
   return (
     <>
@@ -770,6 +784,7 @@ function HandSkeleton3D({
         meshListRef={meshListRef}
         tooltipRef={tooltipRef}
         tooltipStateRef={tooltipStateRef}
+        isCameraMoving={isCameraMoving}
       />
       <HandMesh
         handIndex={1}
@@ -781,6 +796,7 @@ function HandSkeleton3D({
         meshListRef={meshListRef}
         tooltipRef={tooltipRef}
         tooltipStateRef={tooltipStateRef}
+        isCameraMoving={isCameraMoving}
       />
     </>
   );
@@ -789,16 +805,21 @@ function HandSkeleton3D({
 function CameraFocusController({
   selectedMesh,
   modelRef,
+  onMoveStateChange,
 }: {
   selectedMesh: THREE.Object3D | null;
   modelRef: React.RefObject<THREE.Group | null>;
+  onMoveStateChange?: (moving: boolean) => void;
 }) {
   const { camera } = useThree();
   const moveRef = useRef<CameraMoveState | null>(null);
   const lookAtRef = useRef(new THREE.Vector3());
 
   useEffect(() => {
-    if (!selectedMesh || !modelRef.current) return;
+    if (!selectedMesh || !modelRef.current) {
+      onMoveStateChange?.(false);
+      return;
+    }
 
     const model = modelRef.current;
     const modelBox = new THREE.Box3().setFromObject(model);
@@ -837,7 +858,8 @@ function CameraFocusController({
       start: performance.now(),
       duration: 1.4,
     };
-  }, [camera, modelRef, selectedMesh]);
+    onMoveStateChange?.(true);
+  }, [camera, modelRef, selectedMesh, onMoveStateChange]);
 
   useFrame(() => {
     const move = moveRef.current;
@@ -852,6 +874,7 @@ function CameraFocusController({
     camera.lookAt(lookAtRef.current);
     if (t >= 1) {
       moveRef.current = null;
+      onMoveStateChange?.(false);
     }
   });
 
@@ -925,11 +948,11 @@ function VitalsCard() {
 
 function VoiceCommandList() {
   const commands = [
-    { action: 'highlight', example: 'Highlight lingual' },
-    { action: 'select', example: 'Select lingual' },
-    { action: 'zoom', example: 'Zoom in on lingual' },
-    { action: 'rotate', example: 'Rotate 45 degrees' },
-    { action: 'query', example: 'What is this?' },
+    { action: "highlight", example: "Highlight lingual" },
+    { action: "select", example: "Select lingual" },
+    { action: "zoom", example: "Zoom in on lingual" },
+    { action: "rotate", example: "Rotate 45 degrees" },
+    { action: "query", example: "What is this?" },
   ];
 
   return (
@@ -938,7 +961,9 @@ function VoiceCommandList() {
       <div className="space-y-2">
         {commands.map((cmd) => (
           <div key={cmd.action} className="rounded-lg bg-white/5 px-3 py-2">
-            <p className="mb-1 text-[10px] font-medium uppercase text-white/50">{cmd.action}</p>
+            <p className="mb-1 text-[10px] font-medium uppercase text-white/50">
+              {cmd.action}
+            </p>
             <p className="text-xs text-white/80">&quot;{cmd.example}&quot;</p>
           </div>
         ))}
@@ -962,27 +987,66 @@ function VoiceActionExecutor({
 }) {
   const { lastAction } = useControlStore();
 
+  const normalizeMeshName = useCallback((value: string) => {
+    return value.toLowerCase().replace(/[^a-z0-9]/g, "");
+  }, []);
+
+  const findMeshByName = useCallback(
+    (name?: string) => {
+      if (!name) return undefined;
+      const normalized = normalizeMeshName(name);
+      if (!normalized) return undefined;
+      const meshes = meshListRef.current;
+
+      const exact = meshes.find((m) => {
+        const meshName = normalizeMeshName(m.name || "");
+        const parentName = normalizeMeshName(m.parent?.name || "");
+        return meshName === normalized || parentName === normalized;
+      }) as THREE.Mesh | undefined;
+
+      if (exact) return exact;
+
+      const partial = meshes.find((m) => {
+        const meshName = normalizeMeshName(m.name || "");
+        const parentName = normalizeMeshName(m.parent?.name || "");
+        return (
+          (meshName &&
+            (meshName.includes(normalized) || normalized.includes(meshName))) ||
+          (parentName &&
+            (parentName.includes(normalized) ||
+              normalized.includes(parentName)))
+        );
+      }) as THREE.Mesh | undefined;
+
+      return partial;
+    },
+    [meshListRef, normalizeMeshName],
+  );
+
   useEffect(() => {
-    console.log('[VoiceActionExecutor] lastAction changed:', lastAction);
-    
+    console.log("[VoiceActionExecutor] lastAction changed:", lastAction);
+
     if (!lastAction) return;
 
-    console.log('[VoiceActionExecutor] Processing action:', lastAction);
+    console.log("[VoiceActionExecutor] Processing action:", lastAction);
 
-    const { type, targetMeshId, parameters } = lastAction;
+    const { type, parameters } = lastAction;
     const targetMeshName = parameters?.targetMeshName as string | undefined;
 
-    if (type === 'select' && targetMeshName) {
+    if (type === "select" && targetMeshName) {
       // Find mesh by name and select it
-      console.log('[VoiceActionExecutor] Looking for mesh with name:', targetMeshName);
-      console.log('[VoiceActionExecutor] Available mesh names:', meshListRef.current.map(m => m.name).slice(0, 10));
-      
-      // Normalize mesh names by removing dots (GLTF files have dots removed)
-      const normalizedTargetName = targetMeshName.replace(/\./g, '');
-      
-      const mesh = meshListRef.current.find(
-        m => m.name === normalizedTargetName
-      ) as THREE.Mesh | undefined;
+      console.log(
+        "[VoiceActionExecutor] Looking for mesh with name:",
+        targetMeshName,
+      );
+      console.log(
+        "[VoiceActionExecutor] Available mesh names:",
+        meshListRef.current.map((m) => m.name).slice(0, 10),
+      );
+
+      const normalizedTargetName = normalizeMeshName(targetMeshName);
+
+      const mesh = findMeshByName(targetMeshName);
 
       if (mesh) {
         // Clear previous highlight
@@ -993,23 +1057,31 @@ function VoiceActionExecutor({
         // Highlight the selected mesh
         setMeshHighlight(mesh, true);
         highlightedMeshRef.current = mesh;
-        
+
         // Set selected mesh for camera movement
         setSelectedMesh(mesh);
-        
-        
-        console.log('[VoiceActionExecutor] Selected mesh:', targetMeshName, '(normalized:', normalizedTargetName, ')');
+
+        console.log(
+          "[VoiceActionExecutor] Selected mesh:",
+          targetMeshName,
+          "(normalized:",
+          normalizedTargetName,
+          ")",
+        );
       } else {
-        console.warn('[VoiceActionExecutor] Mesh not found:', targetMeshName, '(normalized:', normalizedTargetName, ')');
+        console.warn(
+          "[VoiceActionExecutor] Mesh not found:",
+          targetMeshName,
+          "(normalized:",
+          normalizedTargetName,
+          ")",
+        );
       }
-    } else if (type === 'highlight' && targetMeshName) {
+    } else if (type === "highlight" && targetMeshName) {
       // Find mesh by name and highlight it
-      // Normalize mesh names by removing dots (GLTF files have dots removed)
-      const normalizedTargetName = targetMeshName.replace(/\./g, '');
-      
-      const mesh = meshListRef.current.find(
-        m => m.name === normalizedTargetName
-      ) as THREE.Mesh | undefined;
+      const normalizedTargetName = normalizeMeshName(targetMeshName);
+
+      const mesh = findMeshByName(targetMeshName);
 
       if (mesh) {
         // Clear previous highlight
@@ -1020,28 +1092,58 @@ function VoiceActionExecutor({
         // Highlight new mesh
         setMeshHighlight(mesh, true);
         highlightedMeshRef.current = mesh;
-        console.log('[VoiceActionExecutor] Highlighted mesh:', targetMeshName, '(normalized:', normalizedTargetName, ')');
+        console.log(
+          "[VoiceActionExecutor] Highlighted mesh:",
+          targetMeshName,
+          "(normalized:",
+          normalizedTargetName,
+          ")",
+        );
       } else {
-        console.warn('[VoiceActionExecutor] Mesh not found:', targetMeshName, '(normalized:', normalizedTargetName, ')');
+        console.warn(
+          "[VoiceActionExecutor] Mesh not found:",
+          targetMeshName,
+          "(normalized:",
+          normalizedTargetName,
+          ")",
+        );
       }
-    } else if (type === 'zoom' && targetMeshName) {
+    } else if (type === "zoom" && targetMeshName) {
       // Find mesh by name and zoom to it
-      // Normalize mesh names by removing dots (GLTF files have dots removed)
-      const normalizedTargetName = targetMeshName.replace(/\./g, '');
-      
-      const mesh = meshListRef.current.find(
-        m => m.name === normalizedTargetName
-      );
+      const normalizedTargetName = normalizeMeshName(targetMeshName);
+
+      const mesh = findMeshByName(targetMeshName);
 
       if (mesh) {
         setSelectedMesh(mesh);
-        console.log('[VoiceActionExecutor] Zooming to mesh:', targetMeshName, '(normalized:', normalizedTargetName, ')');
+        console.log(
+          "[VoiceActionExecutor] Zooming to mesh:",
+          targetMeshName,
+          "(normalized:",
+          normalizedTargetName,
+          ")",
+        );
       } else {
-        console.warn('[VoiceActionExecutor] Mesh not found:', targetMeshName, '(normalized:', normalizedTargetName, ')');
+        console.warn(
+          "[VoiceActionExecutor] Mesh not found:",
+          targetMeshName,
+          "(normalized:",
+          normalizedTargetName,
+          ")",
+        );
       }
     }
     // Note: Rotate action is handled by the existing rotation controls
-  }, [lastAction, meshListRef, selectedMesh, setSelectedMesh, highlightedMeshRef, setMeshHighlight]);
+  }, [
+    lastAction,
+    meshListRef,
+    selectedMesh,
+    setSelectedMesh,
+    highlightedMeshRef,
+    setMeshHighlight,
+    findMeshByName,
+    normalizeMeshName,
+  ]);
 
   return null;
 }
@@ -1065,9 +1167,11 @@ function VoiceControlPanel() {
     <div className="pointer-events-auto absolute bottom-6 left-6 w-80 rounded-2xl bg-black/50 p-4 text-white shadow-lg backdrop-blur">
       <div className="flex items-center justify-between">
         <p className="text-xs font-semibold text-white/70">VOICE CONTROL</p>
-        <div className={`h-2 w-2 rounded-full ${isConnected ? 'bg-emerald-400' : 'bg-red-400'}`} />
+        <div
+          className={`h-2 w-2 rounded-full ${isConnected ? "bg-emerald-400" : "bg-red-400"}`}
+        />
       </div>
-      
+
       <div className="mt-3 space-y-2">
         <div className="flex items-center justify-between">
           <span className="text-xs text-white/60">Status</span>
@@ -1079,49 +1183,61 @@ function VoiceControlPanel() {
                 <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-400 delay-150" />
               </div>
             )}
-            <span className={`text-xs font-medium ${isListening ? 'text-blue-300' : 'text-white/70'}`}>
-              {isProcessing ? 'Processing...' : isListening ? 'Listening...' : 'Idle'}
+            <span
+              className={`text-xs font-medium ${isListening ? "text-blue-300" : "text-white/70"}`}
+            >
+              {isProcessing
+                ? "Processing..."
+                : isListening
+                  ? "Listening..."
+                  : "Idle"}
             </span>
           </div>
         </div>
-        
+
         {lastTranscript && (
           <div className="rounded-lg bg-white/5 px-3 py-2">
-            <p className="mb-1 text-[10px] font-medium text-white/50">REQUEST</p>
+            <p className="mb-1 text-[10px] font-medium text-white/50">
+              REQUEST
+            </p>
             <p className="text-xs text-white/90">{lastTranscript}</p>
           </div>
         )}
-        
+
         {lastResponse && (
           <div className="rounded-lg bg-blue-500/10 px-3 py-2 border border-blue-500/20">
-            <p className="mb-1 text-[10px] font-medium text-blue-400/70">RESPONSE</p>
+            <p className="mb-1 text-[10px] font-medium text-blue-400/70">
+              RESPONSE
+            </p>
             <p className="text-xs text-blue-100/90">{lastResponse}</p>
           </div>
         )}
-        
+
         {lastActionTaken && (
           <div className="rounded-lg bg-green-500/10 px-3 py-2 border border-green-500/20">
-            <p className="mb-1 text-[10px] font-medium text-green-400/70">ACTION TAKEN</p>
+            <p className="mb-1 text-[10px] font-medium text-green-400/70">
+              ACTION TAKEN
+            </p>
             <p className="text-xs text-green-100/90">{lastActionTaken}</p>
           </div>
         )}
-        
+
         {error && (
           <div className="rounded-lg bg-red-500/20 px-3 py-2">
             <p className="text-xs text-red-300">{error}</p>
           </div>
         )}
-        
+
         <div className="flex gap-2 pt-2">
           <button
             onClick={isListening ? stopListening : startListening}
             className={`flex-1 rounded-lg px-3 py-2 text-xs font-medium transition-colors ${
               isListening
-                ? 'bg-red-500/20 text-red-300 hover:bg-red-500/30'
-                : 'bg-blue-500/20 text-blue-300 hover:bg-blue-500/30'
+                ? "bg-red-500/20 text-red-300 hover:bg-red-500/30"
+                : "bg-blue-500/20 text-blue-300 hover:bg-blue-500/30"
             }`}
           >
-            {isListening ? 'Stop' : 'Start'}
+            {isListening ? "Stop" : "Start"}
           </button>
           <button
             onClick={clearHistory}
@@ -1151,6 +1267,9 @@ export default function ModelPage() {
     name: string;
     visible: boolean;
   }>({ name: "", visible: false });
+  const [isCameraMoving, setIsCameraMoving] = useState(false);
+  const [isThumbsUpRight, setIsThumbsUpRight] = useState(false);
+  const { startListening, stopListening, isListening } = useVoiceControlStore();
   const toastTimeoutRef = useRef<number | null>(null);
   const rafRef = useRef<number | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -1324,6 +1443,31 @@ export default function ModelPage() {
           landmarksRef.current = result.landmarks ?? [];
           gesturesRef.current = result.gestures ?? [];
           handednessRef.current = result.handednesses ?? [];
+
+          const thumbsUpRight = (result.gestures ?? []).some(
+            (gestureList, index) => {
+              const handedness = result.handednesses?.[index];
+              const handLabelRaw =
+                handedness?.[0]?.categoryName ??
+                handedness?.[0]?.displayName ??
+                "";
+              const handLabel = handLabelRaw.toLowerCase();
+              const isRightHand = handLabel
+                ? handLabel === "right"
+                : index === 1;
+              if (!isRightHand) return false;
+              const primary = gestureList?.[0];
+              const rawName = (
+                primary?.categoryName ??
+                primary?.displayName ??
+                ""
+              ).toLowerCase();
+              return rawName.includes("thumb") && rawName.includes("up");
+            },
+          );
+          setIsThumbsUpRight((prev) =>
+            prev === thumbsUpRight ? prev : thumbsUpRight,
+          );
         }
         rafRef.current = requestAnimationFrame(loop);
       };
@@ -1349,6 +1493,19 @@ export default function ModelPage() {
       console.error = originalConsoleError;
     };
   }, []);
+
+  useEffect(() => {
+    if (isThumbsUpRight) {
+      if (!isListening) {
+        void startListening();
+      }
+      return;
+    }
+
+    if (isListening) {
+      stopListening();
+    }
+  }, [isThumbsUpRight, isListening, startListening, stopListening]);
 
   return (
     <div className="relative h-screen w-screen bg-black">
@@ -1379,6 +1536,7 @@ export default function ModelPage() {
         <CameraFocusController
           selectedMesh={selectedMesh}
           modelRef={modelRef}
+          onMoveStateChange={setIsCameraMoving}
         />
 
         <HandSkeleton3D
@@ -1390,6 +1548,7 @@ export default function ModelPage() {
           meshListRef={meshListRef}
           tooltipRef={tooltipRef}
           tooltipStateRef={tooltipStateRef}
+          isCameraMoving={isCameraMoving}
         />
       </Canvas>
 
