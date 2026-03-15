@@ -4,6 +4,9 @@ CREATE EXTENSION IF NOT EXISTS vector;
 -- Create ENUM type for message roles
 CREATE TYPE message_role AS ENUM ('user', 'assistant');
 
+-- Create ENUM type for embedding source types
+CREATE TYPE embedding_source_type AS ENUM ('message', 'mesh_name');
+
 -- Create structures table
 CREATE TABLE structures (
     id UUID PRIMARY KEY,
@@ -13,20 +16,42 @@ CREATE TABLE structures (
     created_at TIMESTAMP DEFAULT now()
 );
 
--- Create messages table
+-- Create messages table (without embedding column)
 CREATE TABLE messages (
     id UUID PRIMARY KEY,
     structure_id UUID REFERENCES structures(id),
     role message_role NOT NULL,
     content TEXT NOT NULL,
-    embedding VECTOR(4096),
     created_at TIMESTAMP DEFAULT now()
+);
+
+-- Create embeddings table
+CREATE TABLE embeddings (
+    id UUID PRIMARY KEY,
+    source_type embedding_source_type NOT NULL,
+    message_id UUID REFERENCES messages(id) ON DELETE CASCADE,
+    structure_id UUID REFERENCES structures(id) ON DELETE CASCADE,
+    embedding VECTOR(4096) NOT NULL,
+    created_at TIMESTAMP DEFAULT now(),
+    
+    -- Ensure either message_id or structure_id is set based on source_type
+    CONSTRAINT valid_source_reference CHECK (
+        (source_type = 'message' AND message_id IS NOT NULL AND structure_id IS NULL) OR
+        (source_type = 'mesh_name' AND message_id IS NULL AND structure_id IS NOT NULL)
+    )
 );
 
 -- Create indexes for better query performance
 CREATE INDEX idx_messages_structure_id ON messages(structure_id);
 CREATE INDEX idx_messages_role ON messages(role);
-CREATE INDEX idx_messages_embedding ON messages USING ivfflat(embedding vector_cosine_ops) WITH (lists = 100);
+
+-- Indexes for embeddings table
+CREATE INDEX idx_embeddings_message_id ON embeddings(message_id) WHERE source_type = 'message';
+CREATE INDEX idx_embeddings_structure_id ON embeddings(structure_id) WHERE source_type = 'mesh_name';
+CREATE INDEX idx_embeddings_source_type ON embeddings(source_type);
+-- Note: Sequential scan is used for vector similarity search (no vector index)
+-- This provides best accuracy with full-precision vectors for small datasets
+-- To enable HNSW index for larger datasets, consider using halfvec type
 
 -- Seed structures table with brain models
 INSERT INTO structures (id, mesh_name, display_name, description) VALUES
