@@ -1,12 +1,26 @@
 "use client";
 
-import React, { Suspense, useEffect, useRef, useCallback } from "react";
-import { Canvas, useLoader, useFrame } from "@react-three/fiber";
+import React, {
+  Suspense,
+  useEffect,
+  useRef,
+  useCallback,
+  useState,
+} from "react";
+import { Canvas, useLoader, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import type { ThreeEvent } from "@react-three/fiber";
 import { FilesetResolver, GestureRecognizer } from "@mediapipe/tasks-vision";
 import useRotationControls from "./functions/use_rotations";
+import { type CameraMoveState } from "./functions/moveToMesh";
+import {
+  computePinchDelta,
+  createPinchZoomState,
+  updatePinchZoom,
+  type PinchZoomState,
+} from "./functions/zoom";
+import printMeshName from "./functions/print_mesh_name";
 
 type NormalizedLandmark = {
   x: number;
@@ -29,9 +43,9 @@ type GestureCategory = {
 };
 
 type GestureList = GestureCategory[][];
+type HandednessList = GestureCategory[][];
 
 const ENABLE_MESH_TOOLTIP = false;
-const POINTING_GESTURE = "Pointing_Up";
 const MIN_CUT_DISTANCE = 0.01;
 const MAX_CUT_POINTS = 6000;
 const INDEX_DIP = 7;
@@ -68,9 +82,13 @@ const HAND_CONNECTIONS: Array<[number, number]> = [
 function Model({
   modelRef,
   meshListRef,
+  onMeshSelect,
+  cutPointsRef,
 }: {
   modelRef: React.RefObject<THREE.Group | null>;
   meshListRef: React.MutableRefObject<THREE.Object3D[]>;
+  onMeshSelect?: (mesh: THREE.Object3D) => void;
+  cutPointsRef: React.MutableRefObject<THREE.Vector3[]>;
 }) {
   const gltf = useLoader(GLTFLoader, "/model/model2.glb");
   const dragging = useRef(false);
@@ -104,6 +122,13 @@ function Model({
   }, [gltf, meshListRef]);
 
   const onPointerDown = (e: ThreeEvent<PointerEvent>) => {
+    e.stopPropagation();
+    if (onMeshSelect && e.button === 0) {
+      const hit = e.intersections?.[0]?.object;
+      if (hit && (hit as THREE.Mesh).isMesh) {
+        onMeshSelect(hit);
+      }
+    }
     dragging.current = true;
     last.current = { x: e.clientX, y: e.clientY };
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
@@ -131,6 +156,7 @@ function Model({
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
     >
+      <CutLines cutPointsRef={cutPointsRef} />
       <primitive object={gltf.scene} />
     </group>
   );
@@ -139,7 +165,7 @@ function Model({
 function HandMesh({
   handIndex,
   landmarksRef,
-  gesturesRef,
+  handednessRef,
   cutPointsRef,
   lastCutPointRef,
   modelRef,
@@ -158,7 +184,7 @@ function HandMesh({
 }: {
   handIndex: number;
   landmarksRef: React.MutableRefObject<NormalizedLandmark[][]>;
-  gesturesRef: React.MutableRefObject<GestureList>;
+  handednessRef: React.MutableRefObject<HandednessList>;
   cutPointsRef: React.MutableRefObject<THREE.Vector3[]>;
   lastCutPointRef: React.MutableRefObject<Array<THREE.Vector3 | null>>;
   modelRef: React.RefObject<THREE.Group | null>;
@@ -197,16 +223,38 @@ function HandMesh({
   const boxHitRef = useRef(new THREE.Vector3());
   const hitResultsRef = useRef<THREE.Intersection[]>([]);
   const projectedRef = useRef(new THREE.Vector3());
-  const scalpelRef = useRef<THREE.Group>(null);
-  const scalpelDirRef = useRef(new THREE.Vector3());
-  const scalpelQuatRef = useRef(new THREE.Quaternion());
-  const scalpelUpRef = useRef(new THREE.Vector3(0, 1, 0));
-  const scalpelRaycasterRef = useRef(new THREE.Raycaster());
-  const scalpelDirNegRef = useRef(new THREE.Vector3());
   const indexTipHitRef = useRef(new THREE.Vector3());
+  const pinchZoomStateRef = useRef<PinchZoomState | null>(null);
+  const pinchPrevDistanceRef = useRef<number | null>(null);
+  const lastFrameTimeRef = useRef<number | null>(null);
+  const rightRotatePrevRef = useRef(new THREE.Vector2());
+  const rightRotateHasPrevRef = useRef(false);
+  const rightRotateTempRef = useRef(new THREE.Vector2());
+  const rightRotateFilteredRef = useRef(new THREE.Vector2());
+  const rightRotateConfigRef = useRef({
+    sensitivityX: 4.5,
+    sensitivityY: 4.5,
+    deadzone: 0.002,
+    smoothing: 0.28,
+    maxSpeed: 0.08,
+  });
+  const rightRotateSnapRef = useRef({
+    snapDegrees: 15,
+    snapOnSpeed: 0.012,
+    snapBlend: 0.25,
+  });
+  const pinchConfigRef = useRef({
+    minDistance: 0.6,
+    maxDistance: 6,
+    speed: 4.2,
+    smoothing: 0.08,
+    pinchThreshold: 0.12,
+    deadzone: 0.002,
+  });
 
   useFrame(({ camera, clock, size }) => {
     const landmarks = landmarksRef.current[handIndex];
+    const handednessEntry = handednessRef.current[handIndex];
     const pointsMesh = pointsRef.current;
     const connectionsMesh = connectionsRef.current;
     const worldPositions = worldPositionsRef.current;
@@ -230,16 +278,15 @@ function HandMesh({
     const tooltipState = tooltipStateRef.current;
     const tooltipEl = tooltipRef.current;
     const projected = projectedRef.current;
-    const gestures = gesturesRef.current;
     const cutPoints = cutPointsRef.current;
     const lastCutPoint = lastCutPointRef.current;
-    const scalpel = scalpelRef.current;
-    const scalpelDir = scalpelDirRef.current;
-    const scalpelQuat = scalpelQuatRef.current;
-    const scalpelUp = scalpelUpRef.current;
-    const scalpelRaycaster = scalpelRaycasterRef.current;
-    const scalpelDirNeg = scalpelDirNegRef.current;
     const indexTipHit = indexTipHitRef.current;
+    const elapsedTime = clock.getElapsedTime();
+    const lastFrameTime = lastFrameTimeRef.current;
+    const rawDelta = lastFrameTime === null ? 0 : elapsedTime - lastFrameTime;
+    lastFrameTimeRef.current = elapsedTime;
+    const deltaTime = Math.min(rawDelta, 0.05);
+    const pinchConfig = pinchConfigRef.current;
 
     if (ENABLE_MESH_TOOLTIP) {
       const time = clock.getElapsedTime();
@@ -250,14 +297,20 @@ function HandMesh({
       }
     }
 
+    const handednessLabel =
+      handednessEntry?.[0]?.categoryName ??
+      handednessEntry?.[0]?.displayName ??
+      "";
+    const allowCutting = handednessLabel
+      ? handednessLabel === "Left"
+      : handIndex === 0;
+    const shouldCheckModel = allowCutting;
     const hasModel = Boolean(model && meshes.length > 0);
-    if (hasModel) {
+    if (hasModel && shouldCheckModel) {
       modelBox.setFromObject(model as THREE.Object3D);
       modelBox.getBoundingSphere(modelSphere);
     }
 
-    const gesture = gestures?.[handIndex]?.[0];
-    const gestureName = gesture?.categoryName ?? gesture?.displayName ?? "";
     let tipHitValid = false;
 
     if (!pointsMesh || !connectionsMesh) return;
@@ -299,7 +352,7 @@ function HandMesh({
       out.z += -depth * depthScale;
       out.z = THREE.MathUtils.clamp(out.z, minZ, maxZ);
 
-      if (hasModel) {
+      if (hasModel && shouldCheckModel) {
         const boxHitPoint = raycaster.ray.intersectBox(modelBox, boxHit);
         if (boxHitPoint) {
           const outDist = camera.position.distanceTo(out);
@@ -326,43 +379,152 @@ function HandMesh({
       }
     }
 
-    const cutEnabled = tipHitValid;
+    const isRightHand = handednessLabel
+      ? handednessLabel === "Right"
+      : handIndex === 1;
+
+    let isPinching = false;
+
+    if (isRightHand && landmarks[4] && landmarks[8]) {
+      const thumbTip = worldPositions[4];
+      const indexTip = worldPositions[8];
+      const { distance, delta } = computePinchDelta(
+        thumbTip,
+        indexTip,
+        pinchPrevDistanceRef.current,
+      );
+      isPinching = distance < pinchConfig.pinchThreshold;
+
+      if (!isPinching) {
+        pinchPrevDistanceRef.current = null;
+      } else {
+        pinchPrevDistanceRef.current = distance;
+
+        if (!pinchZoomStateRef.current) {
+          pinchZoomStateRef.current = createPinchZoomState(camera, {
+            minDistance: pinchConfig.minDistance,
+            maxDistance: pinchConfig.maxDistance,
+            speed: pinchConfig.speed,
+            smoothing: pinchConfig.smoothing,
+          });
+        }
+
+        const pinchDelta =
+          Math.abs(delta) > pinchConfig.deadzone
+            ? THREE.MathUtils.clamp(delta, -0.05, 0.05)
+            : 0;
+
+        if (pinchDelta !== 0) {
+          updatePinchZoom(
+            camera,
+            pinchDelta,
+            deltaTime,
+            pinchZoomStateRef.current,
+            {
+              minDistance: pinchConfig.minDistance,
+              maxDistance: pinchConfig.maxDistance,
+              speed: pinchConfig.speed,
+              smoothing: pinchConfig.smoothing,
+            },
+          );
+        }
+      }
+    } else {
+      pinchPrevDistanceRef.current = null;
+    }
+
+    if (isRightHand && model && landmarks[INDEX_TIP]) {
+      const tip = landmarks[INDEX_TIP];
+      const current = rightRotateTempRef.current;
+      const nx = mirror ? 1 - tip.x : tip.x;
+      current.set(nx, tip.y);
+
+      if (rightRotateHasPrevRef.current && !isPinching) {
+        const prev = rightRotatePrevRef.current;
+        const config = rightRotateConfigRef.current;
+        const filtered = rightRotateFilteredRef.current;
+        const rawDx = current.x - prev.x;
+        const rawDy = current.y - prev.y;
+        const magnitude = Math.hypot(rawDx, rawDy);
+        const t = 1 - Math.exp(-config.smoothing * deltaTime * 60);
+
+        if (magnitude > config.deadzone) {
+          filtered.x = THREE.MathUtils.lerp(filtered.x, rawDx, t);
+          filtered.y = THREE.MathUtils.lerp(filtered.y, rawDy, t);
+        } else {
+          filtered.multiplyScalar(1 - t);
+          if (filtered.lengthSq() < config.deadzone * config.deadzone) {
+            filtered.set(0, 0);
+          }
+        }
+
+        let dx = filtered.x * config.sensitivityX;
+        let dy = filtered.y * config.sensitivityY;
+        dx = THREE.MathUtils.clamp(dx, -config.maxSpeed, config.maxSpeed);
+        dy = THREE.MathUtils.clamp(dy, -config.maxSpeed, config.maxSpeed);
+
+        if (dx !== 0 || dy !== 0) {
+          model.rotation.y -= dx;
+          model.rotation.x += dy;
+          model.rotation.x = THREE.MathUtils.clamp(
+            model.rotation.x,
+            -Math.PI / 2,
+            Math.PI / 2,
+          );
+        }
+
+        const snap = rightRotateSnapRef.current;
+        const speed = Math.hypot(dx, dy);
+        if (speed < snap.snapOnSpeed) {
+          const snapRad = THREE.MathUtils.degToRad(snap.snapDegrees);
+          const targetY = Math.round(model.rotation.y / snapRad) * snapRad;
+          const targetX = Math.round(model.rotation.x / snapRad) * snapRad;
+          model.rotation.y = THREE.MathUtils.lerp(
+            model.rotation.y,
+            targetY,
+            snap.snapBlend,
+          );
+          model.rotation.x = THREE.MathUtils.lerp(
+            model.rotation.x,
+            targetX,
+            snap.snapBlend,
+          );
+          model.rotation.x = THREE.MathUtils.clamp(
+            model.rotation.x,
+            -Math.PI / 2,
+            Math.PI / 2,
+          );
+        }
+      }
+
+      rightRotatePrevRef.current.copy(current);
+      rightRotateHasPrevRef.current = true;
+    } else {
+      rightRotateHasPrevRef.current = false;
+      rightRotateFilteredRef.current.set(0, 0);
+    }
+
+    const cutEnabled = allowCutting && tipHitValid;
 
     if (!cutEnabled) {
       lastCutPoint[handIndex] = null;
     }
 
     if (cutEnabled && hasModel) {
+      if (!model) return;
       const hitPoint = indexTipHit;
+      const localHit = hitPoint.clone();
+      model.worldToLocal(localHit);
 
       const last = lastCutPoint[handIndex];
-      if (!last || last.distanceTo(hitPoint) > MIN_CUT_DISTANCE) {
+      if (!last || last.distanceTo(localHit) > MIN_CUT_DISTANCE) {
         if (last) {
-          cutPoints.push(last.clone(), hitPoint.clone());
+          cutPoints.push(last.clone(), localHit.clone());
           if (cutPoints.length > MAX_CUT_POINTS) {
             cutPoints.splice(0, cutPoints.length - MAX_CUT_POINTS);
           }
         }
-        lastCutPoint[handIndex] = hitPoint.clone();
-      }
-    }
-
-    if (scalpel) {
-      if (cutEnabled) {
-        const tip = worldPositions[INDEX_TIP];
-        const base = worldPositions[INDEX_DIP] ?? tip;
-        scalpelDir.copy(tip).sub(base);
-        if (scalpelDir.lengthSq() > 0.000001) {
-          scalpelDir.normalize();
-          scalpelQuat.setFromUnitVectors(scalpelUp, scalpelDir);
-          scalpel.position.copy(tip);
-          scalpel.quaternion.copy(scalpelQuat);
-          scalpel.visible = true;
-        } else {
-          scalpel.visible = false;
-        }
-      } else {
-        scalpel.visible = false;
+        lastCutPoint[handIndex] = localHit.clone();
       }
     }
 
@@ -436,24 +598,6 @@ function HandMesh({
         <cylinderGeometry args={[1, 1, 1, 8]} />
         <meshBasicMaterial color={lineColor} />
       </instancedMesh>
-      <group ref={scalpelRef} visible={false}>
-        <mesh position={[0, -0.08, 0]}>
-          <cylinderGeometry args={[0.004, 0.004, 0.12, 8]} />
-          <meshStandardMaterial
-            color="#dfe6e9"
-            metalness={0.7}
-            roughness={0.2}
-          />
-        </mesh>
-        <mesh position={[0, -0.02, 0]}>
-          <coneGeometry args={[0.006, 0.04, 8]} />
-          <meshStandardMaterial
-            color="#b2bec3"
-            metalness={0.8}
-            roughness={0.2}
-          />
-        </mesh>
-      </group>
     </group>
   );
 }
@@ -508,7 +652,7 @@ function CutLines({
 
 function HandSkeleton3D({
   landmarksRef,
-  gesturesRef,
+  handednessRef,
   cutPointsRef,
   lastCutPointRef,
   modelRef,
@@ -517,7 +661,7 @@ function HandSkeleton3D({
   tooltipStateRef,
 }: {
   landmarksRef: React.MutableRefObject<NormalizedLandmark[][]>;
-  gesturesRef: React.MutableRefObject<GestureList>;
+  handednessRef: React.MutableRefObject<HandednessList>;
   cutPointsRef: React.MutableRefObject<THREE.Vector3[]>;
   lastCutPointRef: React.MutableRefObject<Array<THREE.Vector3 | null>>;
   modelRef: React.RefObject<THREE.Group | null>;
@@ -530,7 +674,7 @@ function HandSkeleton3D({
       <HandMesh
         handIndex={0}
         landmarksRef={landmarksRef}
-        gesturesRef={gesturesRef}
+        handednessRef={handednessRef}
         cutPointsRef={cutPointsRef}
         lastCutPointRef={lastCutPointRef}
         modelRef={modelRef}
@@ -541,7 +685,7 @@ function HandSkeleton3D({
       <HandMesh
         handIndex={1}
         landmarksRef={landmarksRef}
-        gesturesRef={gesturesRef}
+        handednessRef={handednessRef}
         cutPointsRef={cutPointsRef}
         lastCutPointRef={lastCutPointRef}
         modelRef={modelRef}
@@ -551,6 +695,78 @@ function HandSkeleton3D({
       />
     </>
   );
+}
+
+function CameraFocusController({
+  selectedMesh,
+  modelRef,
+}: {
+  selectedMesh: THREE.Object3D | null;
+  modelRef: React.RefObject<THREE.Group | null>;
+}) {
+  const { camera } = useThree();
+  const moveRef = useRef<CameraMoveState | null>(null);
+  const lookAtRef = useRef(new THREE.Vector3());
+
+  useEffect(() => {
+    if (!selectedMesh || !modelRef.current) return;
+
+    const model = modelRef.current;
+    const modelBox = new THREE.Box3().setFromObject(model);
+    const modelSphere = new THREE.Sphere();
+    modelBox.getBoundingSphere(modelSphere);
+    if (!Number.isFinite(modelSphere.radius)) return;
+
+    const meshBox = new THREE.Box3().setFromObject(selectedMesh);
+    const meshCenter = new THREE.Vector3();
+    meshBox.getCenter(meshCenter);
+
+    const modelCenter = modelSphere.center.clone();
+    const toMesh = meshCenter.clone().sub(modelCenter);
+    if (toMesh.lengthSq() < 0.000001) {
+      toMesh.set(0, 0, 1);
+    } else {
+      toMesh.normalize();
+    }
+
+    const minDistance = modelSphere.radius * 2.2;
+    const currentDistance = camera.position.distanceTo(modelCenter);
+    const distance = Math.max(minDistance, currentDistance);
+
+    const targetPosition = modelCenter
+      .clone()
+      .addScaledVector(toMesh, distance);
+    const lookFrom = camera.position
+      .clone()
+      .add(camera.getWorldDirection(new THREE.Vector3()));
+
+    moveRef.current = {
+      from: camera.position.clone(),
+      to: targetPosition,
+      lookFrom,
+      lookTo: meshCenter,
+      start: performance.now(),
+      duration: 1.4,
+    };
+  }, [camera, modelRef, selectedMesh]);
+
+  useFrame(() => {
+    const move = moveRef.current;
+    if (!move) return;
+    const t = Math.min(
+      (performance.now() - move.start) / (move.duration * 1000),
+      1,
+    );
+    const ease = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    camera.position.lerpVectors(move.from, move.to, ease);
+    lookAtRef.current.lerpVectors(move.lookFrom, move.lookTo, ease);
+    camera.lookAt(lookAtRef.current);
+    if (t >= 1) {
+      moveRef.current = null;
+    }
+  });
+
+  return null;
 }
 
 function TopBar() {
@@ -647,12 +863,115 @@ export default function ModelPage() {
     name: "",
     point: new THREE.Vector3(),
   });
+  const [selectionToast, setSelectionToast] = useState<{
+    name: string;
+    visible: boolean;
+  }>({ name: "", visible: false });
+  const toastTimeoutRef = useRef<number | null>(null);
   const rafRef = useRef<number | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const landmarksRef = useRef<NormalizedLandmark[][]>([]);
   const gesturesRef = useRef<GestureList>([]);
+  const handednessRef = useRef<HandednessList>([]);
   const cutPointsRef = useRef<THREE.Vector3[]>([]);
   const lastCutPointRef = useRef<Array<THREE.Vector3 | null>>([null, null]);
+  const [selectedMesh, setSelectedMesh] = useState<THREE.Object3D | null>(null);
+  const highlightedMeshRef = useRef<THREE.Mesh | null>(null);
+
+  const setMeshHighlight = useCallback((mesh: THREE.Mesh, enabled: boolean) => {
+    const materials = Array.isArray(mesh.material)
+      ? mesh.material
+      : [mesh.material];
+
+    materials.forEach((material, index) => {
+      if (!material) return;
+      let mat = material as THREE.MeshStandardMaterial & {
+        emissive?: THREE.Color;
+        emissiveIntensity?: number;
+        color?: THREE.Color;
+        userData: Record<string, unknown>;
+      };
+
+      if (!mat.userData) {
+        mat.userData = {};
+      }
+      const userData = mat.userData as Record<string, unknown>;
+
+      if (enabled && !userData.__meshHighlightCloned) {
+        const cloned = mat.clone();
+        cloned.userData = {
+          ...(cloned.userData ?? {}),
+          __meshHighlightCloned: true,
+        };
+        if (Array.isArray(mesh.material)) {
+          const nextMaterials = [...mesh.material];
+          nextMaterials[index] = cloned;
+          mesh.material = nextMaterials;
+        } else {
+          mesh.material = cloned;
+        }
+        mat = cloned as typeof mat;
+      }
+
+      if (enabled) {
+        if (!userData.__highlightOriginal) {
+          userData.__highlightOriginal = {
+            color: mat.color ? mat.color.getHex() : undefined,
+            emissive: mat.emissive ? mat.emissive.getHex() : undefined,
+            emissiveIntensity: mat.emissiveIntensity,
+          };
+        }
+        if (mat.emissive) {
+          mat.emissive.set("#3b82f6");
+          mat.emissiveIntensity = 0.8;
+        } else if (mat.color) {
+          mat.color.set("#9bd1ff");
+        }
+      } else {
+        const original = userData.__highlightOriginal as
+          | { color?: number; emissive?: number; emissiveIntensity?: number }
+          | undefined;
+
+        if (original) {
+          if (mat.color && original.color !== undefined) {
+            mat.color.setHex(original.color);
+          }
+          if (mat.emissive && original.emissive !== undefined) {
+            mat.emissive.setHex(original.emissive);
+            if (original.emissiveIntensity !== undefined) {
+              mat.emissiveIntensity = original.emissiveIntensity;
+            }
+          }
+        }
+      }
+    });
+  }, []);
+
+  const handleMeshSelect = useCallback(
+    (object: THREE.Object3D) => {
+      if (!(object as THREE.Mesh).isMesh) return;
+      const mesh = object as THREE.Mesh;
+      printMeshName(mesh);
+
+      if (highlightedMeshRef.current && highlightedMeshRef.current !== mesh) {
+        setMeshHighlight(highlightedMeshRef.current, false);
+      }
+
+      setMeshHighlight(mesh, true);
+      highlightedMeshRef.current = mesh;
+      setSelectedMesh(mesh);
+
+      const selectionName = mesh.name || mesh.parent?.name || "Mesh";
+      setSelectionToast({ name: selectionName, visible: true });
+      if (toastTimeoutRef.current) {
+        window.clearTimeout(toastTimeoutRef.current);
+      }
+      toastTimeoutRef.current = window.setTimeout(() => {
+        setSelectionToast((prev) => ({ ...prev, visible: false }));
+      }, 1800);
+    },
+    [setMeshHighlight, setSelectionToast],
+  );
 
   useEffect(() => {
     let mounted = true;
@@ -693,9 +1012,9 @@ export default function ModelPage() {
         },
         runningMode: "VIDEO",
         numHands: 2,
-        minHandDetectionConfidence: 0.01,
-        minHandPresenceConfidence: 0.01,
-        minTrackingConfidence: 0.01,
+        minHandDetectionConfidence: 0.5,
+        minHandPresenceConfidence: 0.5,
+        minTrackingConfidence: 0.5,
       });
 
       recognizerRef.current = recognizer;
@@ -707,6 +1026,7 @@ export default function ModelPage() {
           const result = recognizerRef.current.recognizeForVideo(video, now);
           landmarksRef.current = result.landmarks ?? [];
           gesturesRef.current = result.gestures ?? [];
+          handednessRef.current = result.handednesses ?? [];
         }
         rafRef.current = requestAnimationFrame(loop);
       };
@@ -745,14 +1065,21 @@ export default function ModelPage() {
         <directionalLight position={[3, 3, 3]} intensity={1.2} />
 
         <Suspense fallback={null}>
-          <Model modelRef={modelRef} meshListRef={meshListRef} />
+          <Model
+            modelRef={modelRef}
+            meshListRef={meshListRef}
+            onMeshSelect={handleMeshSelect}
+            cutPointsRef={cutPointsRef}
+          />
         </Suspense>
-
-        <CutLines cutPointsRef={cutPointsRef} />
+        <CameraFocusController
+          selectedMesh={selectedMesh}
+          modelRef={modelRef}
+        />
 
         <HandSkeleton3D
           landmarksRef={landmarksRef}
-          gesturesRef={gesturesRef}
+          handednessRef={handednessRef}
           cutPointsRef={cutPointsRef}
           lastCutPointRef={lastCutPointRef}
           modelRef={modelRef}
@@ -782,6 +1109,13 @@ export default function ModelPage() {
         ref={tooltipRef}
         className="pointer-events-none absolute left-0 top-0 rounded-md bg-black/80 px-2 py-1 text-xs text-white opacity-0 shadow-lg"
       />
+      <div
+        className={`pointer-events-none absolute left-1/2 top-6 -translate-x-1/2 rounded-full bg-black/70 px-4 py-2 text-xs text-white shadow-lg transition-opacity duration-200 ${
+          selectionToast.visible ? "opacity-100" : "opacity-0"
+        }`}
+      >
+        {selectionToast.name}
+      </div>
       <video
         ref={videoRef}
         className="pointer-events-none absolute top-20 right-6 h-36 w-48 transform -scale-x-100 rounded-md border border-white/30 object-cover shadow-lg"
