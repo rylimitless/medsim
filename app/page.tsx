@@ -1,76 +1,90 @@
+import Link from "next/link";
+
 export default function Home() {
   return (
-    <div className="relative min-h-screen overflow-x-hidden bg-background-dark font-display text-slate-100 selection:bg-primary/30">
+    <div className="relative min-h-screen overflow-x-hidden bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 selection:bg-primary/30">
       {/* Navigation */}
-      <header className="fixed top-0 z-50 w-full border-b border-white/5 bg-background-dark/80 backdrop-blur-md">
-        <nav className="mx-auto flex h-20 max-w-6xl items-center justify-between px-6">
+      <header className="fixed top-0 w-full z-50 border-b border-white/5 bg-background-dark/80 backdrop-blur-md">
+        <nav className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary" />
-            <span className="text-lg font-semibold tracking-tight">MedSim</span>
+            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+              <span className="material-symbols-outlined text-white text-xl">
+                deployed_code
+              </span>
+            </div>
+            <span className="text-xl font-bold tracking-tight">MedSim</span>
           </div>
-          <div className="hidden items-center gap-10 md:flex">
+          <div className="hidden md:flex items-center gap-10">
             <a
-              className="text-sm font-medium text-slate-200 transition-colors hover:text-primary"
+              className="text-sm font-medium hover:text-primary transition-colors"
               href="#"
             >
               How It Works
             </a>
             <a
-              className="text-sm font-medium text-slate-200 transition-colors hover:text-primary"
+              className="text-sm font-medium hover:text-primary transition-colors"
               href="#"
             >
               Features
             </a>
             <a
-              className="text-sm font-medium text-slate-200 transition-colors hover:text-primary"
+              className="text-sm font-medium hover:text-primary transition-colors"
               href="#"
             >
-              Who It&apos;s For
+              Who is It For
             </a>
           </div>
-          <button className="rounded-full border border-white/20 px-5 py-2 text-sm font-semibold text-slate-100 transition-all hover:bg-white/5">
-            Try the Simulator
-          </button>
+          <Link
+            href="/model"
+            className="px-6 py-2 rounded-full border border-primary text-primary hover:bg-primary hover:text-white transition-all text-sm font-bold"
+          >
+            Launch Experience
+          </Link>
         </nav>
       </header>
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden px-6 pb-16 pt-28">
-        <div className="absolute right-0 top-0 -mr-40 -mt-20 h-[500px] w-[500px] rounded-full bg-primary/10 blur-[120px]" />
-        <div className="mx-auto grid max-w-6xl items-center gap-14 lg:grid-cols-[1.1fr_0.9fr]">
-          <div className="z-10 lg:pl-2">
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/50 bg-primary/10 px-4 py-1">
-              <span className="h-2 w-2 rounded-full bg-primary" />
-              <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-primary">
+      <section className="relative pb-20 px-6 overflow-hidden pt-32">
+        <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-primary/10 blur-[120px] rounded-full -mr-40 -mt-20"></div>
+        <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-16 items-center">
+          <div className="z-10 lg:pl-12">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 mb-6">
+              <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+              <span className="text-xs font-bold uppercase tracking-widest text-primary">
                 Next Gen Training
               </span>
             </div>
-            <h1 className="mb-6 text-6xl font-semibold italic leading-tight text-slate-200 md:text-7xl">
-              <span className="font-serif">MedSim</span>
+            <h1 className="text-7xl md:text-8xl font-serif font-bold mb-6 text-gradient italic leading-tight">
+              MedSim
             </h1>
-            <p className="mb-4 max-w-lg text-xl font-medium text-slate-300">
+            <p className="font-display text-xl md:text-2xl text-slate-400 font-light max-w-lg leading-relaxed mb-6">
               World-class surgical training.{" "}
               <span className="text-white">No lab required.</span>
             </p>
-            <p className="mb-8 max-w-xl text-sm leading-6 text-slate-500">
+            <p className="font-display text-sm md:text-base text-slate-500 font-light max-w-lg leading-relaxed mb-10">
               According to the Journal of Surgical Research, surgical training
               can require expensive simulation labs often costing upwards of
               $300,000, leaving many medical students with few opportunities to
               safely practice procedures before operating on real patients.
             </p>
-            <button className="inline-flex items-center gap-3 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-primary/30 transition-all hover:brightness-110">
-              Launch Experience
-            </button>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Link
+                href="/model"
+                className="bg-primary text-white px-8 py-4 rounded-full font-bold hover:brightness-110 transition-all flex items-center justify-center gap-2 border border-primary"
+              >
+                <span>Launch Experience</span>
+                <span className="material-symbols-outlined">arrow_forward</span>
+              </Link>
+            </div>
           </div>
-
-          <div className="relative">
-            <div className="absolute inset-0 rounded-[28px] bg-gradient-to-tr from-black/40 via-transparent to-primary/10" />
-            <div className="relative overflow-hidden rounded-[28px] border border-white/10 bg-white/5 p-6">
+          <div className="relative aspect-square">
+            <div className="absolute inset-0 bg-gradient-to-t from-background-dark via-transparent to-transparent z-10 lg:pl-12"></div>
+            <div className="w-full h-full rounded-3xl overflow-hidden glass-card glow-border">
               <div
-                className="aspect-square w-full rounded-2xl bg-cover bg-center"
+                className="w-full h-full bg-cover bg-center"
                 style={{
                   backgroundImage:
-                    'url("https://lh3.googleusercontent.com/aida-public/AB6AXuAxkMK0uHK1gJj2C4f78LjEPmwXOixz2IWRVKwzZCQCktwiWeiZ3hBhbZKGND7z7Pp9U8o3naJzzFet1y8QnZsXjK96ATgrKc8OmUHz9IDHUiEhel3R8e0WfZdjv2UU1unFAVqQiqVJSs6F0fiUDWKliIE1Kp_s02JJSBM7XcXIiL_HrcZMCMW0vWMkYgVtzOXuMj5DBi9KV8Cey9RB6Sm30XeRFzWLhBUzN5USQ6MDZ2c1iEy1NpfQ-THNKtr1fMVhnjKn2WpfJlU")',
+                    'url("https://cdn-ikphhfh.nitrocdn.com/ZLMLGDaEaySMbrIZeaewzBWupKGZvuun/assets/images/optimized/rev-86a6276/www.3dorganon.com/wp-content/uploads/2025/12/AI_Digestive_stage_5.4.webp")',
                 }}
               />
             </div>
@@ -78,11 +92,13 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Statement */}
-      <section className="px-6 py-16">
-        <div className="mx-auto max-w-5xl text-center">
-          <div className="mb-6 inline-flex h-3 w-3 rotate-45 rounded-sm bg-primary/80 shadow-[0_0_12px_rgba(43,108,238,0.6)]" />
-          <h2 className="text-2xl font-semibold leading-relaxed text-slate-200 md:text-3xl">
+      {/* The Problem */}
+      <section className="px-6 bg-slate-950/50 py-16">
+        <div className="max-w-5xl mx-auto text-center">
+          <span className="material-symbols-outlined text-primary mb-8 text-3xl">
+            emergency_home
+          </span>
+          <h2 className="font-serif font-bold leading-tight text-slate-100 text-2xl md:text-4xl">
             Immersive 3D anatomy and AI-powered surgical simulation,{" "}
             <span className="text-primary">
               built for the next generation of physicians.
@@ -95,93 +111,134 @@ export default function Home() {
       </section>
 
       {/* Key Features */}
-      <section className="px-6 pb-20">
-        <div className="mx-auto grid max-w-6xl items-center gap-16 lg:grid-cols-[1.1fr_0.9fr]">
-          <div className="grid grid-cols-2 gap-6">
-            <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-6 shadow-[0_20px_50px_rgba(0,0,0,0.35)]">
-              <h5 className="mb-2 text-sm font-semibold">1. Study Mode</h5>
-              <p className="text-xs text-slate-500">
-                Enter study mode and explore a 3D brain.
-              </p>
+      <section className="px-6 bg-slate-900/20 py-32">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid lg:grid-cols-2 gap-20 items-center">
+            <div className="grid grid-cols-2 gap-6">
+              <div className="glass-card p-8 rounded-2xl">
+                <span className="material-symbols-outlined text-primary mb-4">
+                  psychology
+                </span>
+                <h5 className="font-bold mb-2">1. Study Mode</h5>
+                <p className="text-xs text-slate-500">
+                  Enter study mode and explore a 3D brain.
+                </p>
+              </div>
+              <div className="glass-card p-8 rounded-2xl mt-8">
+                <span className="material-symbols-outlined text-primary mb-4">
+                  mic_external_on
+                </span>
+                <h5 className="font-bold mb-2">2. AI Exploration</h5>
+                <p className="text-xs text-slate-500">
+                  Select any structure and ask the AI questions by voice.
+                </p>
+              </div>
+              <div className="glass-card p-8 rounded-2xl -mt-8">
+                <span className="material-symbols-outlined text-primary mb-4">
+                  surgery
+                </span>
+                <h5 className="font-bold mb-2">3. Simulate</h5>
+                <p className="text-xs text-slate-500">
+                  Simulate complex surgical procedures.
+                </p>
+              </div>
+              <div className="glass-card p-8 rounded-2xl">
+                <span className="material-symbols-outlined text-primary mb-4">
+                  insights
+                </span>
+                <h5 className="font-bold mb-2">4. AI Feedback</h5>
+                <p className="text-xs text-slate-500">
+                  Get instant AI feedback on your performance.
+                </p>
+              </div>
             </div>
-            <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-6">
-              <h5 className="mb-2 text-sm font-semibold">2. AI Exploration</h5>
-              <p className="text-xs text-slate-500">
-                Select any structure and ask the AI questions by voice.
-              </p>
+            <div>
+              <h3 className="text-sm font-bold uppercase tracking-[0.3em] text-primary mb-4">
+                Capabilities
+              </h3>
+              <h2 className="font-serif font-bold mb-8 text-gradient text-6xl">
+                Key Features
+              </h2>
+              <ul>
+                <li className="flex items-center gap-3 text-slate-200">
+                  <span className="material-symbols-outlined text-primary">
+                    check_circle
+                  </span>
+                  <span>3D anatomical exploration</span>
+                </li>
+                <li className="flex items-center gap-3 text-slate-200">
+                  <span className="material-symbols-outlined text-primary">
+                    check_circle
+                  </span>
+                  <span>Voice-activated AI</span>
+                </li>
+                <li className="flex items-center gap-3 text-slate-200">
+                  <span className="material-symbols-outlined text-primary">
+                    check_circle
+                  </span>
+                  <span>Surgical simulation</span>
+                </li>
+                <li className="flex items-center gap-3 text-slate-200">
+                  <span className="material-symbols-outlined text-primary">
+                    check_circle
+                  </span>
+                  <span>Accessible on any browser</span>
+                </li>
+              </ul>
             </div>
-            <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-6">
-              <h5 className="mb-2 text-sm font-semibold">3. Simulate</h5>
-              <p className="text-xs text-slate-500">
-                Simulate complex surgical procedures.
-              </p>
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-6">
-              <h5 className="mb-2 text-sm font-semibold">4. AI Feedback</h5>
-              <p className="text-xs text-slate-500">
-                Get instant AI feedback on your performance.
-              </p>
-            </div>
-          </div>
-
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.35em] text-primary/80">
-              Capabilities
-            </p>
-            <h2 className="mt-4 text-4xl font-semibold text-slate-100">
-              <span className="font-serif">Key Features</span>
-            </h2>
-            <ul className="mt-6 space-y-3 text-sm text-slate-300">
-              <li>• 3D anatomical exploration</li>
-              <li>• Voice-activated AI</li>
-              <li>• Surgical simulation</li>
-              <li>• Accessible on any browser</li>
-            </ul>
           </div>
         </div>
       </section>
 
       {/* Who It's For */}
       <section className="px-6 py-20">
-        <div className="mx-auto max-w-6xl">
-          <div className="mb-12 text-center">
-            <h2 className="text-4xl font-semibold text-slate-100 md:text-5xl">
-              <span className="font-serif">
-                Built for the Future of Medicine
-              </span>
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-5xl font-serif font-bold text-gradient mb-6">
+              Built for the Future of Medicine
             </h2>
-            <p className="mx-auto mt-3 max-w-2xl text-sm text-slate-500">
+            <p className="text-slate-400 max-w-2xl mx-auto">
               From students to seasoned professionals, MedSim scales to the
               needs of the entire medical community.
             </p>
           </div>
-
-          <div className="grid gap-10 md:grid-cols-2">
-            <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04] p-10">
-              <h4 className="mb-4 text-xl font-semibold">For Institutions</h4>
-              <p className="mb-6 text-sm text-slate-500">
+          <div className="grid md:grid-cols-2 gap-12">
+            <div className="relative overflow-hidden rounded-3xl glass-card p-12 group hover:bg-white/5 transition-all">
+              <div className="absolute top-0 right-0 p-8">
+                <span className="material-symbols-outlined text-primary/30 text-8xl group-hover:text-primary transition-colors">
+                  school
+                </span>
+              </div>
+              <h4 className="text-3xl font-bold mb-6">For Institutions</h4>
+              <p className="text-slate-400 text-lg mb-8 max-w-sm">
                 Replace expensive physical labs with scalable virtual centers.
                 Track student progress with enterprise-grade dashboards.
               </p>
               <a
-                className="inline-flex items-center gap-2 text-sm font-semibold text-primary"
+                className="inline-flex items-center gap-2 text-primary font-bold"
                 href="#"
               >
-                Learn about licensing
+                Learn about licensing{" "}
+                <span className="material-symbols-outlined">chevron_right</span>
               </a>
             </div>
-
-            <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04] p-10">
-              <h4 className="mb-4 text-xl font-semibold">For Surgeons</h4>
-              <p className="mb-6 text-sm text-slate-500">
+            <div className="relative overflow-hidden rounded-3xl glass-card p-12 group hover:bg-white/5 transition-all">
+              <div className="absolute top-0 right-0 p-8">
+                <span className="material-symbols-outlined text-primary/30 text-8xl group-hover:text-primary transition-colors">
+                  medical_services
+                </span>
+              </div>
+              <h4 className="text-3xl font-bold mb-6">For Surgeons</h4>
+              <p className="text-slate-400 text-lg mb-8 max-w-sm">
                 Practice complex or rare procedures before heading into the OR.
                 Maintain peak technical proficiency anywhere.
               </p>
               <a
-                className="inline-flex items-center gap-2 text-sm font-semibold text-primary"
+                className="inline-flex items-center gap-2 text-primary font-bold"
                 href="#"
               >
-                Explore the library
+                Explore the library{" "}
+                <span className="material-symbols-outlined">chevron_right</span>
               </a>
             </div>
           </div>
@@ -189,24 +246,28 @@ export default function Home() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-white/5 px-6 py-10">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-6 md:flex-row">
+      <footer className="px-6 border-t border-white/5 py-12">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-10">
           <div className="flex items-center gap-3">
-            <div className="flex h-6 w-6 items-center justify-center rounded bg-primary" />
-            <span className="font-semibold">MedSim</span>
+            <div className="w-6 h-6 bg-primary rounded flex items-center justify-center">
+              <span className="material-symbols-outlined text-white text-xs">
+                deployed_code
+              </span>
+            </div>
+            <span className="font-bold">MedSim</span>
           </div>
-          <div className="flex gap-8 text-xs text-slate-500">
-            <a className="transition-colors hover:text-white" href="#">
+          <div className="flex gap-10 text-slate-500 text-sm">
+            <a className="hover:text-white transition-colors" href="#">
               Privacy Policy
             </a>
-            <a className="transition-colors hover:text-white" href="#">
+            <a className="hover:text-white transition-colors" href="#">
               Terms of Service
             </a>
-            <a className="transition-colors hover:text-white" href="#">
+            <a className="hover:text-white transition-colors" href="#">
               Contact Support
             </a>
           </div>
-          <p className="text-xs text-slate-600">
+          <p className="text-slate-600 text-xs">
             © 2024 MedSim Technologies Inc. All rights reserved.
           </p>
         </div>
