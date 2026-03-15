@@ -7,13 +7,22 @@ export interface AudioChunk {
 
 export type VoiceCaptureEvents = {
   audioChunk: (chunk: AudioChunk) => void;
+  transcription: (text: string) => void;
   error: (error: Error) => void;
 };
+
+// Buffer for collecting audio chunks during recording session
+interface AudioBuffer {
+  chunks: Blob[];
+}
 
 export class VoiceCaptureService extends EventEmitter<VoiceCaptureEvents> {
   private mediaRecorder: MediaRecorder | null = null;
   private stream: MediaStream | null = null;
   private isCapturing = false;
+  private useApiTranscription = true; // Use /api/voice/transcribe endpoint
+  private audioBuffer: AudioBuffer | null = null; // Instance-level buffer
+  private currentMimeType: string = '';
 
   async startCapture(): Promise<void> {
     if (this.isCapturing) {
@@ -22,7 +31,6 @@ export class VoiceCaptureService extends EventEmitter<VoiceCaptureEvents> {
     }
 
     try {
-      // Request microphone access
       this.stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           sampleRate: 16000,
@@ -32,29 +40,31 @@ export class VoiceCaptureService extends EventEmitter<VoiceCaptureEvents> {
         },
       });
 
-      // Check for supported MIME types
+      console.log('[VoiceCapture] Audio stream obtained successfully');
+
       const mimeType = this.getSupportedMimeType();
       if (!mimeType) {
         throw new Error('No supported audio MIME type found');
       }
 
-      // Create MediaRecorder
+      this.currentMimeType = mimeType;
       this.mediaRecorder = new MediaRecorder(this.stream, {
         mimeType,
         audioBitsPerSecond: 16000,
       });
 
-      // Handle data available
       this.mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
-          this.emit('audioChunk', {
-            data: event.data,
-            timestamp: Date.now(),
-          });
+          this.emit('audioChunk', { data: event.data, timestamp: Date.now() });
+          
+          // Accumulate all audio chunks during recording
+          if (!this.audioBuffer) {
+            this.audioBuffer = { chunks: [] };
+          }
+          this.audioBuffer.chunks.push(event.data);
         }
       };
 
-      // Handle errors
       this.mediaRecorder.onerror = (event) => {
         const error = new Error(
           `MediaRecorder error: ${event instanceof Error ? event.message : 'Unknown error'}`
@@ -62,10 +72,10 @@ export class VoiceCaptureService extends EventEmitter<VoiceCaptureEvents> {
         this.emit('error', error);
       };
 
-      // Start recording with 100ms intervals
       this.mediaRecorder.start(100);
-      this.isCapturing = true;
+      console.log('[VoiceCapture] MediaRecorder started');
 
+      this.isCapturing = true;
       console.log('[VoiceCapture] Started capturing audio');
     } catch (error) {
       const captureError = error instanceof Error
@@ -76,34 +86,97 @@ export class VoiceCaptureService extends EventEmitter<VoiceCaptureEvents> {
     }
   }
 
-  stopCapture(): void {
-    if (!this.isCapturing) {
-      return;
-    }
+  async stopCapture(): Promise<void> {
+    if (!this.isCapturing) return;
 
     try {
       if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+        // Create a promise that resolves when the recorder actually stops
+        const stopPromise = new Promise<void>((resolve) => {
+          if (this.mediaRecorder) {
+            this.mediaRecorder.onstop = () => resolve();
+          } else {
+            resolve();
+          }
+        });
+        
         this.mediaRecorder.stop();
+        await stopPromise;
       }
 
       if (this.stream) {
         this.stream.getTracks().forEach((track) => track.stop());
       }
 
+      // Send complete audio buffer for transcription when recording stops
+      if (this.audioBuffer && this.audioBuffer.chunks.length > 0 && this.useApiTranscription) {
+        // Use a local reference to the buffer so we can clear instance state
+        const bufferToSend = this.audioBuffer;
+        this.audioBuffer = null;
+        
+        await this.sendBufferForTranscription(bufferToSend);
+      }
+
       this.isCapturing = false;
       console.log('[VoiceCapture] Stopped capturing audio');
     } catch (error) {
       console.error('[VoiceCapture] Error stopping capture:', error);
+      const captureError = error instanceof Error ? error : new Error('Unknown error stopping capture');
+      this.emit('error', captureError);
+      throw captureError;
+    }
+  }
+
+  private async sendBufferForTranscription(buffer: AudioBuffer): Promise<void> {
+    if (buffer.chunks.length === 0) {
+      throw new Error('Cannot send empty audio buffer for transcription');
+    }
+
+    try {
+      // Combine chunks into a single blob using the recorded MIME type
+      const audioBlob = new Blob(buffer.chunks, { type: this.currentMimeType || 'audio/webm' });
+      
+      // Determine file extension based on MIME type
+      let extension = 'webm';
+      if (this.currentMimeType.includes('wav')) extension = 'wav';
+      else if (this.currentMimeType.includes('ogg')) extension = 'ogg';
+      
+      // Create form data
+      const formData = new FormData();
+      formData.append('audio', audioBlob, `audio.${extension}`);
+      
+      // Send to transcription endpoint
+      const response = await fetch('/api/voice/transcribe', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[VoiceCapture] Transcription failed:', errorText);
+        throw new Error(`Transcription failed: ${errorText}`);
+      }
+      
+      const result = await response.json();
+      
+      if (result.text && result.text.trim()) {
+        // Emit transcription event
+        this.emit('transcription', result.text.trim());
+      }
+      
+    } catch (error) {
+      console.error('[VoiceCapture] Error sending buffer for transcription:', error);
+      throw error;
     }
   }
 
   private getSupportedMimeType(): string {
     const mimeTypes = [
-      'audio/webm;codecs=opus',
-      'audio/webm',
+      'audio/wav',
       'audio/ogg;codecs=opus',
       'audio/ogg',
-      'audio/wav',
+      'audio/webm;codecs=opus',
+      'audio/webm',
     ];
 
     for (const mimeType of mimeTypes) {
@@ -117,5 +190,9 @@ export class VoiceCaptureService extends EventEmitter<VoiceCaptureEvents> {
 
   getIsCapturing(): boolean {
     return this.isCapturing;
+  }
+
+  setUseApiTranscription(use: boolean): void {
+    this.useApiTranscription = use;
   }
 }

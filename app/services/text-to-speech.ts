@@ -1,9 +1,16 @@
-export class TextToSpeechService {
+import EventEmitter from 'eventemitter3';
+
+export type TTSEvents = {
+  voicesChanged: (voices: SpeechSynthesisVoice[]) => void;
+};
+
+export class TextToSpeechService extends EventEmitter<TTSEvents> {
   private synthesis: SpeechSynthesis | null = null;
   private voices: SpeechSynthesisVoice[] = [];
   private isSpeaking = false;
 
   constructor() {
+    super();
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       this.synthesis = window.speechSynthesis;
       this.loadVoices();
@@ -19,9 +26,14 @@ export class TextToSpeechService {
     if (!this.synthesis) return;
     this.voices = this.synthesis.getVoices();
     console.log('[TTS] Loaded voices:', this.voices.length);
+    this.emit('voicesChanged', this.voices);
   }
 
-  speak(text: string, options: { rate?: number; pitch?: number; volume?: number } = {}): void {
+  getVoices(): SpeechSynthesisVoice[] {
+    return this.voices;
+  }
+
+  speak(text: string, options: { rate?: number; pitch?: number; volume?: number; voiceName?: string } = {}): void {
     if (!this.synthesis) {
       console.warn('[TTS] Speech synthesis not supported');
       return;
@@ -38,9 +50,12 @@ export class TextToSpeechService {
     utterance.volume = options.volume !== undefined ? options.volume : 1.0;
 
     // Try to find a good voice
-    const preferredVoice = this.voices.find(voice => 
-      voice.lang.startsWith('en') && voice.name.includes('Google')
-    ) || this.voices.find(voice => voice.lang.startsWith('en')) || this.voices[0];
+    let preferredVoice = this.voices[0];
+    if (options.voiceName) {
+      preferredVoice = this.voices.find(v => v.name === options.voiceName) || preferredVoice;
+    } else {
+      preferredVoice = this.voices.find(voice => voice.lang.startsWith('en')) || preferredVoice;
+    }
 
     if (preferredVoice) {
       utterance.voice = preferredVoice;

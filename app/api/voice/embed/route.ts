@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleGenAI } from '@google/genai';
+import { EmbeddingService } from '@/app/services/embedding-service';
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,22 +12,45 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const apiKey = process.env.GOOGLE_GENAI_API_KEY;
+    const apiKey = process.env.OPENROUTER_API_KEY;
     if (!apiKey) {
       return NextResponse.json(
-        { error: 'Google GenAI API key not configured' },
+        { error: 'OpenRouter API key not configured' },
         { status: 500 }
       );
     }
 
-    const ai = new GoogleGenAI({ apiKey });
-
-    const result = await ai.models.embedContent({
-      model: 'text-embedding-004',
-      contents: text,
+    const embeddingService = new EmbeddingService(apiKey);
+    
+    // We don't have a specific structureId here since it's a general embedding request
+    // but the generateEmbedding method requires it for storage.
+    // For general use, we might want a different method or just use a dummy ID.
+    // However, the current generateEmbedding also stores it in the DB.
+    
+    // Let's use the fetch logic directly if we don't want to store it, 
+    // or just call generateEmbedding with a dummy ID.
+    
+    const response = await fetch('https://openrouter.ai/api/v1/embeddings', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': process.env.VERCEL_URL || 'http://localhost:3000',
+        'X-Title': 'MedSim Voice Control',
+      },
+      body: JSON.stringify({
+        model: process.env.OPENROUTER_EMBEDDING_MODEL || 'qwen/qwen3-embedding-8b',
+        input: text,
+      }),
     });
 
-    const embedding = result.embeddings?.[0]?.values || [];
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`OpenRouter API error: ${response.status} - ${errorText}`);
+    }
+
+    const result = await response.json();
+    const embedding = result.data?.[0]?.embedding || [];
 
     return NextResponse.json({ embedding });
 

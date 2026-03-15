@@ -34,6 +34,7 @@ export async function queryDatabase<T>(text: string, params: any[] = []): Promis
   const dbPool = getPool();
   
   try {
+    console.log('[DB] Executing query:', text.substring(0, 100) + (text.length > 100 ? '...' : ''));
     const result = await dbPool.query(text, params);
     return result.rows as T[];
   } catch (error) {

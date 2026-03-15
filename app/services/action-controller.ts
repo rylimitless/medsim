@@ -1,5 +1,5 @@
 import { Intent } from './intent-classifier';
-import { MeshMatch } from './embedding-service';
+import type { MeshMatch } from './embedding-service';
 import { useControlStore, VoiceAction } from '../store/control_store';
 
 export class ActionController {
@@ -21,6 +21,9 @@ export class ActionController {
           break;
         case 'select':
           await this.executeSelect(intent, meshMatch);
+          break;
+        case 'query':
+          await this.executeQuery(intent, meshMatch);
           break;
         default:
           throw new Error(`Unknown action type: ${intent.action}`);
@@ -45,9 +48,14 @@ export class ActionController {
     // Update store with zoom action
     this.store.setCurrentCommand(`Zoom ${level > 1 ? 'in' : 'out'}${meshMatch ? ` on ${meshMatch.displayName}` : ''}`);
     this.store.setError(null);
-
-    // Note: The actual zoom implementation would interact with the Three.js scene
-    // For now, we're just updating the store state
+    
+    // Set the executable action for the 3D scene
+    this.store.setLastAction({
+      type: 'zoom',
+      targetMeshId,
+      parameters: { level },
+      timestamp: Date.now()
+    });
   }
 
   private async executeRotate(intent: Intent, meshMatch: MeshMatch | null): Promise<void> {
@@ -61,8 +69,13 @@ export class ActionController {
     this.store.setCurrentCommand(`Rotate ${degrees}° on ${axis}-axis${meshMatch ? ` for ${meshMatch.displayName}` : ''}`);
     this.store.setError(null);
 
-    // Note: The actual rotation implementation would interact with the Three.js scene
-    // For now, we're just updating the store state
+    // Set the executable action for the 3D scene
+    this.store.setLastAction({
+      type: 'rotate',
+      targetMeshId,
+      parameters: { degrees, axis },
+      timestamp: Date.now()
+    });
   }
 
   private async executeHighlight(intent: Intent, meshMatch: MeshMatch | null): Promise<void> {
@@ -72,29 +85,64 @@ export class ActionController {
     console.log('[ActionController] Highlight - color:', color, 'target:', targetMeshId);
 
     if (!meshMatch) {
-      throw new Error('Cannot highlight: no mesh specified');
+      console.warn('[ActionController] Cannot highlight: no mesh specified');
+      this.store.setError('Could not find the specified anatomical structure.');
+      return;
     }
 
     // Update store with highlight action
     this.store.setCurrentCommand(`Highlight ${meshMatch.displayName} in ${color}`);
     this.store.setError(null);
 
-    // Note: The actual highlight implementation would interact with the Three.js scene
-    // For now, we're just updating the store state
+    // Set the executable action for the 3D scene
+    this.store.setLastAction({
+      type: 'highlight',
+      targetMeshId,
+      parameters: { color },
+      timestamp: Date.now()
+    });
   }
 
   private async executeSelect(intent: Intent, meshMatch: MeshMatch | null): Promise<void> {
     if (!meshMatch) {
-      throw new Error('Cannot select: no mesh specified');
+      console.warn('[ActionController] Cannot select: no mesh specified');
+      this.store.setError('Could not find the specified anatomical structure.');
+      return;
     }
 
-    console.log('[ActionController] Select - target:', meshMatch.meshId);
+    console.log('[ActionController] Select - target:', meshMatch.meshId, 'meshName:', meshMatch.meshName);
 
     // Update store with select action
     this.store.setCurrentCommand(`Select ${meshMatch.displayName}`);
     this.store.setError(null);
 
-    // Note: The actual select implementation would interact with the Three.js scene
-    // For now, we're just updating the store state
+    const action = {
+      type: 'select' as const,
+      targetMeshId: meshMatch.meshId,
+      parameters: { targetMeshName: meshMatch.meshName },
+      timestamp: Date.now()
+    };
+    
+    console.log('[ActionController] Setting lastAction:', action);
+    this.store.setLastAction(action);
+    console.log('[ActionController] lastAction set successfully');
+  }
+
+  private async executeQuery(intent: Intent, meshMatch: MeshMatch | null): Promise<void> {
+    const targetMeshId = meshMatch?.meshId || null;
+
+    console.log('[ActionController] Query - target:', targetMeshId);
+
+    // Update store with query action
+    this.store.setCurrentCommand(`Query: ${intent.targetMesh}`);
+    this.store.setError(null);
+
+    // Set the executable action for the 3D scene
+    this.store.setLastAction({
+      type: 'query',
+      targetMeshId,
+      parameters: { response: intent.response },
+      timestamp: Date.now()
+    });
   }
 }

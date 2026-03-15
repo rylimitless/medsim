@@ -5,12 +5,13 @@ export interface Intent {
   targetMesh: string;
   parameters: Record<string, any>;
   confidence: number;
+  response?: string;
 }
 
 export class IntentClassifier {
   async classify(transcription: string): Promise<Intent> {
     try {
-      console.log('[IntentClassifier] Classifying transcription:', transcription);
+      console.log('[IntentClassifier] Starting classification for:', transcription);
 
       const response = await fetch('/api/voice/classify', {
         method: 'POST',
@@ -20,15 +21,19 @@ export class IntentClassifier {
         body: JSON.stringify({ transcription }),
       });
 
+      console.log('[IntentClassifier] Response status:', response.status, response.statusText);
+
       if (!response.ok) {
-        throw new Error(`API request failed: ${response.statusText}`);
+        const errorText = await response.text();
+        console.error('[IntentClassifier] Error response body:', errorText);
+        throw new Error(`API request failed: ${response.statusText} - ${errorText}`);
       }
 
       const parsed = await response.json();
-      console.log('[IntentClassifier] Parsed intent:', parsed);
+      console.log('[IntentClassifier] Successfully parsed intent:', parsed);
 
       // Validate the response
-      const validActions: VoiceAction[] = ['zoom', 'rotate', 'highlight', 'select'];
+      const validActions: VoiceAction[] = ['zoom', 'rotate', 'highlight', 'select', 'query'];
       if (!validActions.includes(parsed.action)) {
         throw new Error(`Invalid action type: ${parsed.action}`);
       }
@@ -38,6 +43,7 @@ export class IntentClassifier {
         targetMesh: parsed.targetMesh || 'scene',
         parameters: parsed.parameters || {},
         confidence: parsed.confidence || 0.5,
+        response: parsed.response,
       };
 
       return intent;

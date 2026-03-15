@@ -16,7 +16,7 @@ interface StructureResult {
 
 export class MeshMatcher {
   private embeddingService: EmbeddingService;
-  private similarityThreshold = 0.7;
+  private similarityThreshold = 0.5;
 
   constructor(apiKey: string = '') {
     this.embeddingService = new EmbeddingService(apiKey);
@@ -26,11 +26,12 @@ export class MeshMatcher {
     try {
       console.log('[MeshMatcher] Finding match for query:', query);
 
-      // Generate embedding for user query
+      // Generate embedding for user query (don't store in database)
       const queryEmbedding = await this.embeddingService.generateEmbedding({
         text: query,
         sourceType: 'mesh_name',
         structureId: '', // This is a user query, not a specific structure
+        store: false, // Don't persist user query embeddings
       });
 
       // Query database for similar mesh names using cosine similarity
@@ -58,23 +59,31 @@ export class MeshMatcher {
           s.id as mesh_id,
           s.mesh_name,
           s.display_name,
-          e.embedding <=> $1 as similarity
+          e.embedding <=> $1::vector as similarity
         FROM structures s
         JOIN embeddings e ON e.structure_id = s.id
         WHERE e.source_type = 'mesh_name'
         ORDER BY similarity ASC
         LIMIT 5
       `,
-        [queryEmbedding]
+        [`[${queryEmbedding.join(',')}]`]
       );
 
+      console.log('[MeshMatcher] Query result length:', result.length);
       if (result.length === 0) {
         return null;
       }
 
-      // Return best match if similarity > threshold
+      console.log('[MeshMatcher] Top matches:');
+      result.forEach((r, i) => {
+        console.log(`  ${i+1}. ${r.display_name} (mesh_name: ${r.mesh_name}) - score: ${r.similarity}`);
+      });
+
+      // Return best match if similarity is high (distance is low)
       const bestMatch = result[0];
-      if (bestMatch.similarity >= this.similarityThreshold) {
+      // Cosine distance: 0 is identical, 2 is opposite.
+      // Similarity = 1 - distance. So distance <= 1 - threshold.
+      if (bestMatch.similarity <= (1 - this.similarityThreshold)) {
         return {
           meshId: bestMatch.mesh_id,
           meshName: bestMatch.mesh_name,

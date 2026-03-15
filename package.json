@@ -10,17 +10,21 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.3.0",
-    "@google/genai": "^1.45.0",
     "@mediapipe/tasks-vision": "^0.10.32",
     "@react-three/fiber": "^9.5.0",
     "@types/pg": "^8.18.0",
     "@types/three": "^0.183.1",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
     "eventemitter3": "^5.0.4",
+    "lucide-react": "^0.577.0",
     "next": "16.1.6",
     "pg": "^8.20.0",
+    "radix-ui": "^1.4.3",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "shadcn": "^4.0.8",
+    "tailwind-merge": "^3.5.0",
     "three": "^0.183.2",
     "tw-animate-css": "^1.4.0",
     "zustand": "^5.0.11"
@@ -30,15 +34,10 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "class-variance-authority": "^0.7.1",
-    "clsx": "^2.1.1",
     "dotenv": "^17.3.1",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
-    "lucide-react": "^0.577.0",
-    "tailwind-merge": "^3.5.0",
     "tailwindcss": "^4",
-    "tailwindcss-animate": "^1.0.7",
     "typescript": "^5"
   }
 }

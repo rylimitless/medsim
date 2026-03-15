@@ -3,7 +3,7 @@ import { create } from "zustand";
 const initialState = { rotating: false };
 
 // Voice command types
-export type VoiceAction = 'zoom' | 'rotate' | 'highlight' | 'select';
+export type VoiceAction = 'zoom' | 'rotate' | 'highlight' | 'select' | 'query';
 
 export interface VoiceCommand {
   id: string;
@@ -30,6 +30,12 @@ type Control = typeof initialState & {
   currentCommand: string;
   lastTranscript: string;
   error: string | null;
+  lastAction: {
+    type: VoiceAction;
+    targetMeshId: string | null;
+    parameters: Record<string, any>;
+    timestamp: number;
+  } | null;
 
   // Voice command history (memory only, last 50)
   commandHistory: VoiceCommand[];
@@ -39,6 +45,7 @@ type Control = typeof initialState & {
   setCurrentCommand: (command: string) => void;
   setLastTranscript: (transcript: string) => void;
   setError: (error: string | null) => void;
+  setLastAction: (action: Control['lastAction']) => void;
   addCommandToHistory: (command: VoiceCommand) => void;
   clearHistory: () => void;
 };
@@ -57,6 +64,7 @@ export const useControlStore = create<Control>((set, get) => ({
   currentCommand: '',
   lastTranscript: '',
   error: null,
+  lastAction: null,
   commandHistory: [],
 
   // Voice control actions
@@ -64,6 +72,11 @@ export const useControlStore = create<Control>((set, get) => ({
   setCurrentCommand: (command) => set({ currentCommand: command }),
   setLastTranscript: (transcript) => set({ lastTranscript: transcript }),
   setError: (error) => set({ error }),
+  setLastAction: (action) => {
+    console.log('[ControlStore] setLastAction called with:', action);
+    set({ lastAction: action });
+    console.log('[ControlStore] lastAction after set:', get().lastAction);
+  },
 
   addCommandToHistory: (command) => set((state) => ({
     commandHistory: [command, ...state.commandHistory].slice(0, 50)

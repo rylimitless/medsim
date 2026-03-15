@@ -2,8 +2,10 @@ import { getPool } from '@/lib/db';
 
 export interface EmbeddingRequest {
   text: string;
-  sourceType: 'mesh_name';
-  structureId: string;
+  sourceType: 'mesh_name' | 'message';
+  structureId?: string;
+  messageId?: string;
+  store?: boolean; // If false, generate embedding but don't store in database
 }
 
 export interface MeshMatch {
@@ -38,7 +40,7 @@ export class EmbeddingService {
           'X-Title': 'MedSim Voice Control',
         },
         body: JSON.stringify({
-          model: 'qwen/qwen3-embedding-8b',
+          model: process.env.OPENROUTER_EMBEDDING_MODEL || 'qwen/qwen3-embedding-8b',
           input: request.text,
         }),
       });
@@ -53,8 +55,12 @@ export class EmbeddingService {
       
       console.log('[EmbeddingService] Generated embedding (length:', embedding.length, ')');
 
-      // Store in database
-      await this.storeEmbedding(request, embedding);
+      // Store in database only if store flag is true (default)
+      if (request.store !== false) {
+        await this.storeEmbedding(request, embedding);
+      } else {
+        console.log('[EmbeddingService] Skipping database storage (store=false)');
+      }
 
       return embedding;
     } catch (error) {
@@ -69,24 +75,37 @@ export class EmbeddingService {
     // Format embedding as PostgreSQL vector string
     const vectorString = `[${embedding.join(',')}]`;
 
-    // Check if embedding already exists
-    const existingCheck = await db.query(
-      'SELECT id FROM embeddings WHERE source_type = $1 AND structure_id = $2',
-      [request.sourceType, request.structureId]
-    );
-
-    if (existingCheck.rows.length > 0) {
-      console.log('[EmbeddingService] Embedding already exists, updating');
-      await db.query(
-        'UPDATE embeddings SET embedding = $1::vector, created_at = NOW() WHERE source_type = $2 AND structure_id = $3',
-        [vectorString, request.sourceType, request.structureId]
+    if (request.sourceType === 'mesh_name') {
+      if (!request.structureId) throw new Error('structureId is required for mesh_name embeddings');
+      
+      // Check if embedding already exists
+      const existingCheck = await db.query(
+        'SELECT id FROM embeddings WHERE source_type = $1 AND structure_id = $2',
+        [request.sourceType, request.structureId]
       );
-    } else {
-      console.log('[EmbeddingService] Creating new embedding');
+
+      if (existingCheck.rows.length > 0) {
+        console.log('[EmbeddingService] Embedding already exists, updating');
+        await db.query(
+          'UPDATE embeddings SET embedding = $1::vector, created_at = NOW() WHERE source_type = $2 AND structure_id = $3',
+          [vectorString, request.sourceType, request.structureId]
+        );
+      } else {
+        console.log('[EmbeddingService] Creating new embedding for structure');
+        await db.query(
+          `INSERT INTO embeddings (id, source_type, structure_id, embedding, created_at)
+          VALUES ($1, $2, $3, $4::vector, NOW())`,
+          [crypto.randomUUID(), request.sourceType, request.structureId, vectorString]
+        );
+      }
+    } else if (request.sourceType === 'message') {
+      if (!request.messageId) throw new Error('messageId is required for message embeddings');
+
+      console.log('[EmbeddingService] Creating new embedding for message');
       await db.query(
-        `INSERT INTO embeddings (id, source_type, structure_id, embedding, created_at)
+        `INSERT INTO embeddings (id, source_type, message_id, embedding, created_at)
         VALUES ($1, $2, $3, $4::vector, NOW())`,
-        [crypto.randomUUID(), request.sourceType, request.structureId, vectorString]
+        [crypto.randomUUID(), request.sourceType, request.messageId, vectorString]
       );
     }
   }

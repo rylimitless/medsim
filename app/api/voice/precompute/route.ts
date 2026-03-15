@@ -3,10 +3,10 @@ import { MeshMatcher } from '@/app/services/mesh-matcher';
 
 export async function POST(request: NextRequest) {
   try {
-    const apiKey = process.env.GOOGLE_GENAI_API_KEY;
+    const apiKey = process.env.OPENROUTER_API_KEY;
     if (!apiKey) {
       return NextResponse.json(
-        { error: 'Google GenAI API key not configured' },
+        { error: 'OpenRouter API key not configured' },
         { status: 500 }
       );
     }
