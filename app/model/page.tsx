@@ -6,6 +6,7 @@ import React, {
   useRef,
   useCallback,
   useState,
+  useMemo,
 } from "react";
 import { Canvas, useLoader, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
@@ -15,12 +16,12 @@ import { FilesetResolver, GestureRecognizer } from "@mediapipe/tasks-vision";
 import useRotationControls from "./functions/use_rotations";
 import { type CameraMoveState } from "./functions/moveToMesh";
 import {
-  computePinchDelta,
   createPinchZoomState,
   updatePinchZoom,
   type PinchZoomState,
 } from "./functions/zoom";
 import printMeshName from "./functions/print_mesh_name";
+import { useControlStore } from "../store/control_store";
 
 type NormalizedLandmark = {
   x: number;
@@ -52,6 +53,7 @@ const INDEX_DIP = 7;
 const INDEX_TIP = 8;
 
 const LANDMARK_COUNT = 21;
+const LEFT_HAND_VISIBLE_INDICES = [5, 6, 7, 8];
 
 const HAND_CONNECTIONS: Array<[number, number]> = [
   [0, 1],
@@ -78,6 +80,38 @@ const HAND_CONNECTIONS: Array<[number, number]> = [
   [9, 13],
   [13, 17],
 ];
+
+function createLabelTexture(text: string) {
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    return new THREE.CanvasTexture(canvas);
+  }
+
+  const fontSize = 48;
+  const paddingX = 24;
+  const paddingY = 14;
+  ctx.font = `600 ${fontSize}px "Arial", sans-serif`;
+  const metrics = ctx.measureText(text);
+  const textWidth = Math.ceil(metrics.width);
+  const textHeight = Math.ceil(fontSize * 1.2);
+
+  canvas.width = textWidth + paddingX * 2;
+  canvas.height = textHeight + paddingY * 2;
+
+  ctx.font = `600 ${fontSize}px "Arial", sans-serif`;
+  ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "#ffffff";
+  ctx.textBaseline = "middle";
+  ctx.fillText(text, paddingX, canvas.height / 2);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.needsUpdate = true;
+  return texture;
+}
 
 function Model({
   modelRef,
@@ -203,6 +237,14 @@ function HandMesh({
 }) {
   const pointsRef = useRef<THREE.InstancedMesh>(null);
   const connectionsRef = useRef<THREE.InstancedMesh>(null);
+  const scalpelLabelRef = useRef<THREE.Sprite>(null);
+  const labelOffsetRef = useRef(new THREE.Vector3(0.03, 0.03, 0));
+  const scalpelLabelTexture = useMemo(() => {
+    if (typeof document === "undefined") return null;
+    return createLabelTexture("scapel");
+  }, []);
+  const addCutMesh = useControlStore((state) => state.addCutMesh);
+  const currentHitMeshRef = useRef<THREE.Object3D | null>(null);
 
   const worldPositionsRef = useRef(
     Array.from({ length: LANDMARK_COUNT }, () => new THREE.Vector3()),
@@ -312,12 +354,16 @@ function HandMesh({
     }
 
     let tipHitValid = false;
+    currentHitMeshRef.current = null;
 
     if (!pointsMesh || !connectionsMesh) return;
 
     if (!landmarks || landmarks.length === 0) {
       pointsMesh.visible = false;
       connectionsMesh.visible = false;
+      if (scalpelLabelRef.current) {
+        scalpelLabelRef.current.visible = false;
+      }
       return;
     }
 
@@ -372,10 +418,22 @@ function HandMesh({
             if (hitResults.length > 0) {
               const hit = hitResults[0];
               indexTipHit.copy(hit.point);
+              currentHitMeshRef.current = hit.object;
               tipHitValid = true;
             }
           }
         }
+      }
+    }
+
+    if (scalpelLabelRef.current) {
+      const shouldShowLabel = allowCutting && Boolean(landmarks[5]);
+      scalpelLabelRef.current.visible =
+        shouldShowLabel && Boolean(scalpelLabelTexture);
+      if (scalpelLabelRef.current.visible) {
+        scalpelLabelRef.current.position
+          .copy(worldPositions[5])
+          .add(labelOffsetRef.current);
       }
     }
 
@@ -386,13 +444,17 @@ function HandMesh({
     let isPinching = false;
 
     if (isRightHand && landmarks[4] && landmarks[8]) {
-      const thumbTip = worldPositions[4];
-      const indexTip = worldPositions[8];
-      const { distance, delta } = computePinchDelta(
-        thumbTip,
-        indexTip,
-        pinchPrevDistanceRef.current,
-      );
+      const thumb = landmarks[4];
+      const index = landmarks[8];
+      const thumbX = mirror ? 1 - thumb.x : thumb.x;
+      const indexX = mirror ? 1 - index.x : index.x;
+      const dx = thumbX - indexX;
+      const dy = thumb.y - index.y;
+      const distance = Math.hypot(dx, dy);
+      const delta =
+        pinchPrevDistanceRef.current === null
+          ? 0
+          : pinchPrevDistanceRef.current - distance;
       isPinching = distance < pinchConfig.pinchThreshold;
 
       if (!isPinching) {
@@ -516,6 +578,12 @@ function HandMesh({
       const localHit = hitPoint.clone();
       model.worldToLocal(localHit);
 
+      const hitMesh = currentHitMeshRef.current;
+      if (hitMesh) {
+        const name = hitMesh.name || hitMesh.parent?.name || "Mesh";
+        addCutMesh({ uuid: hitMesh.uuid, name });
+      }
+
       const last = lastCutPoint[handIndex];
       if (!last || last.distanceTo(localHit) > MIN_CUT_DISTANCE) {
         if (last) {
@@ -546,7 +614,9 @@ function HandMesh({
     }
 
     for (let i = 0; i < LANDMARK_COUNT; i += 1) {
+      const isVisible = !allowCutting || LEFT_HAND_VISIBLE_INDICES.includes(i);
       dummy.position.copy(worldPositions[i]);
+      dummy.scale.setScalar(isVisible ? 1 : 0);
       dummy.updateMatrix();
       pointsMesh.setMatrixAt(i, dummy.matrix);
     }
@@ -561,7 +631,16 @@ function HandMesh({
       tempDir.copy(vb).sub(va);
       const length = tempDir.length();
 
-      if (length === 0) {
+      const showConnection =
+        !allowCutting ||
+        (LEFT_HAND_VISIBLE_INDICES.includes(a) &&
+          LEFT_HAND_VISIBLE_INDICES.includes(b));
+
+      if (!showConnection) {
+        connectionDummy.position.copy(tempMid);
+        connectionDummy.quaternion.identity();
+        connectionDummy.scale.set(0, 0, 0);
+      } else if (length === 0) {
         connectionDummy.position.copy(tempMid);
         connectionDummy.quaternion.identity();
         connectionDummy.scale.set(0, 0, 0);
@@ -591,6 +670,15 @@ function HandMesh({
         <sphereGeometry args={[pointRadius, 16, 16]} />
         <meshBasicMaterial color={pointColor} />
       </instancedMesh>
+      {scalpelLabelTexture && (
+        <sprite ref={scalpelLabelRef} scale={[0.18, 0.07, 1]}>
+          <spriteMaterial
+            map={scalpelLabelTexture}
+            transparent
+            depthTest={false}
+          />
+        </sprite>
+      )}
       <instancedMesh
         ref={connectionsRef}
         args={[undefined, undefined, HAND_CONNECTIONS.length]}
