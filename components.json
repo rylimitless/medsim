@@ -1,0 +1,44 @@
+{
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "style": "default",
+  "rsc": true,
+  "tsx": true,
+  "tailwind": {
+    "cssVariables": {
+      "border-collapse": "hsl(var(--border-collapse))",
+      "border-primary": "hsl(var(--border-primary))",
+      "border-secondary": "hsl(var(--border-secondary))",
+      "border-muted": "hsl(var(--border-muted))",
+      "border-accent": "hsl(var(--border-accent))",
+      "border-destructive": "hsl(var(--border-destructive))",
+      "border-input": "hsl(var(--border-input))",
+      "border-ring": "hsl(var(--border-ring))",
+      "background": "hsl(var(--background))",
+      "foreground": "hsl(var(--foreground))",
+      "card": "hsl(var(--card))",
+      "card-foreground": "hsl(var(--card-foreground))",
+      "popover": "hsl(var(--popover))",
+      "popover-muted": "hsl(var(--popover-muted))",
+      "muted": "hsl(var(--muted))",
+      "accent": "hsl(var(--accent))",
+      "destructive": "hsl(var(--destructive))",
+      "destructive-foreground": "hsl(var(--destructive-foreground))",
+      "ring": "hsl(var(--ring))",
+      "ring-offset": "hsl(var(--ring-offset))",
+      "secondary": "hsl(var(--secondary))",
+      "secondary-foreground": "hsl(var(--secondary-foreground))",
+      "input": "hsl(var(--input))",
+      "primary": "hsl(var(--primary))",
+      "primary-foreground": "hsl(var(--primary-foreground))",
+      "light": "hsl(var(--light))",
+      "light-invert": "hsl(var(--light-invert))"
+    },
+    "aliases": {
+      "components": "@/components",
+      "utils": "@/lib/utils",
+      "ui": "@/components/ui",
+      "lib": "@/lib",
+      "hooks": "@/hooks"
+    }
+  }
+}

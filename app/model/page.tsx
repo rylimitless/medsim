@@ -13,6 +13,8 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import type { ThreeEvent } from "@react-three/fiber";
 import { FilesetResolver, GestureRecognizer } from "@mediapipe/tasks-vision";
+import { useVoiceControlStore } from "../store/voice-control-store";
+import { useControlStore } from "../store/control_store";
 import useRotationControls from "./functions/use_rotations";
 import { type CameraMoveState } from "./functions/moveToMesh";
 import {
@@ -21,7 +23,6 @@ import {
   type PinchZoomState,
 } from "./functions/zoom";
 import printMeshName from "./functions/print_mesh_name";
-import { useControlStore } from "../store/control_store";
 
 type NormalizedLandmark = {
   x: number;
@@ -922,19 +923,214 @@ function VitalsCard() {
   );
 }
 
-function RiskCard() {
+function VoiceCommandList() {
+  const commands = [
+    { action: 'highlight', example: 'Highlight lingual' },
+    { action: 'select', example: 'Select lingual' },
+    { action: 'zoom', example: 'Zoom in on lingual' },
+    { action: 'rotate', example: 'Rotate 45 degrees' },
+    { action: 'query', example: 'What is this?' },
+  ];
+
   return (
     <div className="pointer-events-auto rounded-2xl bg-black/50 p-4 text-white shadow-lg backdrop-blur">
+      <p className="mb-3 text-sm font-semibold">Voice Commands</p>
+      <div className="space-y-2">
+        {commands.map((cmd) => (
+          <div key={cmd.action} className="rounded-lg bg-white/5 px-3 py-2">
+            <p className="mb-1 text-[10px] font-medium uppercase text-white/50">{cmd.action}</p>
+            <p className="text-xs text-white/80">&quot;{cmd.example}&quot;</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function VoiceActionExecutor({
+  meshListRef,
+  selectedMesh,
+  setSelectedMesh,
+  highlightedMeshRef,
+  setMeshHighlight,
+}: {
+  meshListRef: React.MutableRefObject<THREE.Object3D[]>;
+  selectedMesh: THREE.Object3D | null;
+  setSelectedMesh: (mesh: THREE.Object3D | null) => void;
+  highlightedMeshRef: React.RefObject<THREE.Mesh | null>;
+  setMeshHighlight: (mesh: THREE.Mesh, enabled: boolean) => void;
+}) {
+  const { lastAction } = useControlStore();
+
+  useEffect(() => {
+    console.log('[VoiceActionExecutor] lastAction changed:', lastAction);
+    
+    if (!lastAction) return;
+
+    console.log('[VoiceActionExecutor] Processing action:', lastAction);
+
+    const { type, targetMeshId, parameters } = lastAction;
+    const targetMeshName = parameters?.targetMeshName as string | undefined;
+
+    if (type === 'select' && targetMeshName) {
+      // Find mesh by name and select it
+      console.log('[VoiceActionExecutor] Looking for mesh with name:', targetMeshName);
+      console.log('[VoiceActionExecutor] Available mesh names:', meshListRef.current.map(m => m.name).slice(0, 10));
+      
+      // Normalize mesh names by removing dots (GLTF files have dots removed)
+      const normalizedTargetName = targetMeshName.replace(/\./g, '');
+      
+      const mesh = meshListRef.current.find(
+        m => m.name === normalizedTargetName
+      ) as THREE.Mesh | undefined;
+
+      if (mesh) {
+        // Clear previous highlight
+        if (highlightedMeshRef.current && highlightedMeshRef.current !== mesh) {
+          setMeshHighlight(highlightedMeshRef.current, false);
+        }
+
+        // Highlight the selected mesh
+        setMeshHighlight(mesh, true);
+        highlightedMeshRef.current = mesh;
+        
+        // Set selected mesh for camera movement
+        setSelectedMesh(mesh);
+        
+        
+        console.log('[VoiceActionExecutor] Selected mesh:', targetMeshName, '(normalized:', normalizedTargetName, ')');
+      } else {
+        console.warn('[VoiceActionExecutor] Mesh not found:', targetMeshName, '(normalized:', normalizedTargetName, ')');
+      }
+    } else if (type === 'highlight' && targetMeshName) {
+      // Find mesh by name and highlight it
+      // Normalize mesh names by removing dots (GLTF files have dots removed)
+      const normalizedTargetName = targetMeshName.replace(/\./g, '');
+      
+      const mesh = meshListRef.current.find(
+        m => m.name === normalizedTargetName
+      ) as THREE.Mesh | undefined;
+
+      if (mesh) {
+        // Clear previous highlight
+        if (highlightedMeshRef.current && highlightedMeshRef.current !== mesh) {
+          setMeshHighlight(highlightedMeshRef.current, false);
+        }
+
+        // Highlight new mesh
+        setMeshHighlight(mesh, true);
+        highlightedMeshRef.current = mesh;
+        console.log('[VoiceActionExecutor] Highlighted mesh:', targetMeshName, '(normalized:', normalizedTargetName, ')');
+      } else {
+        console.warn('[VoiceActionExecutor] Mesh not found:', targetMeshName, '(normalized:', normalizedTargetName, ')');
+      }
+    } else if (type === 'zoom' && targetMeshName) {
+      // Find mesh by name and zoom to it
+      // Normalize mesh names by removing dots (GLTF files have dots removed)
+      const normalizedTargetName = targetMeshName.replace(/\./g, '');
+      
+      const mesh = meshListRef.current.find(
+        m => m.name === normalizedTargetName
+      );
+
+      if (mesh) {
+        setSelectedMesh(mesh);
+        console.log('[VoiceActionExecutor] Zooming to mesh:', targetMeshName, '(normalized:', normalizedTargetName, ')');
+      } else {
+        console.warn('[VoiceActionExecutor] Mesh not found:', targetMeshName, '(normalized:', normalizedTargetName, ')');
+      }
+    }
+    // Note: Rotate action is handled by the existing rotation controls
+  }, [lastAction, meshListRef, selectedMesh, setSelectedMesh, highlightedMeshRef, setMeshHighlight]);
+
+  return null;
+}
+
+function VoiceControlPanel() {
+  const {
+    isListening,
+    isSpeaking,
+    isConnected,
+    isProcessing,
+    lastTranscript,
+    lastResponse,
+    lastActionTaken,
+    error,
+    startListening,
+    stopListening,
+    clearHistory,
+  } = useVoiceControlStore();
+
+  return (
+    <div className="pointer-events-auto absolute bottom-6 left-6 w-80 rounded-2xl bg-black/50 p-4 text-white shadow-lg backdrop-blur">
       <div className="flex items-center justify-between">
-        <p className="text-sm font-semibold">Surgical Risk</p>
-        <p className="text-sm font-semibold text-blue-300">40%</p>
+        <p className="text-xs font-semibold text-white/70">VOICE CONTROL</p>
+        <div className={`h-2 w-2 rounded-full ${isConnected ? 'bg-emerald-400' : 'bg-red-400'}`} />
       </div>
-      <div className="mt-3 h-1.5 w-full rounded-full bg-white/10">
-        <div className="h-1.5 w-2/5 rounded-full bg-blue-400" />
+      
+      <div className="mt-3 space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-white/60">Status</span>
+          <div className="flex items-center gap-2">
+            {isProcessing && (
+              <div className="flex items-center gap-1">
+                <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-400" />
+                <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-400 delay-75" />
+                <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-400 delay-150" />
+              </div>
+            )}
+            <span className={`text-xs font-medium ${isListening ? 'text-blue-300' : 'text-white/70'}`}>
+              {isProcessing ? 'Processing...' : isListening ? 'Listening...' : 'Idle'}
+            </span>
+          </div>
+        </div>
+        
+        {lastTranscript && (
+          <div className="rounded-lg bg-white/5 px-3 py-2">
+            <p className="mb-1 text-[10px] font-medium text-white/50">REQUEST</p>
+            <p className="text-xs text-white/90">{lastTranscript}</p>
+          </div>
+        )}
+        
+        {lastResponse && (
+          <div className="rounded-lg bg-blue-500/10 px-3 py-2 border border-blue-500/20">
+            <p className="mb-1 text-[10px] font-medium text-blue-400/70">RESPONSE</p>
+            <p className="text-xs text-blue-100/90">{lastResponse}</p>
+          </div>
+        )}
+        
+        {lastActionTaken && (
+          <div className="rounded-lg bg-green-500/10 px-3 py-2 border border-green-500/20">
+            <p className="mb-1 text-[10px] font-medium text-green-400/70">ACTION TAKEN</p>
+            <p className="text-xs text-green-100/90">{lastActionTaken}</p>
+          </div>
+        )}
+        
+        {error && (
+          <div className="rounded-lg bg-red-500/20 px-3 py-2">
+            <p className="text-xs text-red-300">{error}</p>
+          </div>
+        )}
+        
+        <div className="flex gap-2 pt-2">
+          <button
+            onClick={isListening ? stopListening : startListening}
+            className={`flex-1 rounded-lg px-3 py-2 text-xs font-medium transition-colors ${
+              isListening
+                ? 'bg-red-500/20 text-red-300 hover:bg-red-500/30'
+                : 'bg-blue-500/20 text-blue-300 hover:bg-blue-500/30'
+            }`}
+          >
+            {isListening ? 'Stop' : 'Start'}
+          </button>
+          <button
+            onClick={clearHistory}
+            className="rounded-lg bg-white/10 px-3 py-2 text-xs font-medium text-white/70 hover:bg-white/20"
+          >
+            Clear
+          </button>
+        </div>
       </div>
-      <p className="mt-3 text-xs text-amber-300">
-        Caution: Motor cortex proximity
-      </p>
     </div>
   );
 }
@@ -1064,6 +1260,19 @@ export default function ModelPage() {
   useEffect(() => {
     let mounted = true;
 
+    // Initialize voice control
+    const initializeVoice = async () => {
+      try {
+        console.log("[ModelPage] Initializing voice control...");
+        const { initializeVoiceControl } = useVoiceControlStore.getState();
+        await initializeVoiceControl();
+        console.log("[ModelPage] Voice control initialized successfully");
+      } catch (error) {
+        console.error("[ModelPage] Failed to initialize voice control:", error);
+      }
+    };
+    initializeVoice();
+
     const originalConsoleError = console.error;
     console.error = (...args: unknown[]) => {
       if (
@@ -1160,6 +1369,13 @@ export default function ModelPage() {
             cutPointsRef={cutPointsRef}
           />
         </Suspense>
+        <VoiceActionExecutor
+          meshListRef={meshListRef}
+          selectedMesh={selectedMesh}
+          setSelectedMesh={setSelectedMesh}
+          highlightedMeshRef={highlightedMeshRef}
+          setMeshHighlight={setMeshHighlight}
+        />
         <CameraFocusController
           selectedMesh={selectedMesh}
           modelRef={modelRef}
@@ -1181,16 +1397,14 @@ export default function ModelPage() {
       <LeftRail />
       <RightRail />
 
+      <VoiceControlPanel />
+
       <div className="pointer-events-none absolute left-1/2 top-24 w-[420px] -translate-x-1/2 rounded-2xl bg-black/40 px-4 py-2 text-xs text-white/60 shadow-lg backdrop-blur">
         Search anatomical structures...
       </div>
 
-      <div className="pointer-events-none absolute bottom-6 left-6 w-56">
-        <VitalsCard />
-      </div>
-
-      <div className="pointer-events-none absolute bottom-6 right-6 w-64">
-        <RiskCard />
+      <div className="pointer-events-none absolute bottom-6 right-6 w-80">
+        <VoiceCommandList />
       </div>
 
       <div

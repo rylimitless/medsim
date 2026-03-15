@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Control Diagnostic Test</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #00ff00;
+        }
+        .section {
+            background: #2a2a2a;
+            border: 1px solid #00ff00;
+            margin: 10px 0;
+            padding: 15px;
+        }
+        .section h2 {
+            margin-top: 0;
+            color: #00ff00;
+        }
+        .status {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 3px;
+        }
+        .success { background: #004400; border-left: 4px solid #00ff00; }
+        .error { background: #440000; border-left: 4px solid #ff0000; }
+        .warning { background: #444400; border-left: 4px solid #ffff00; }
+        .info { background: #004444; border-left: 4px solid #00ffff; }
+        .log {
+            background: #000;
+            color: #888;
+            padding: 10px;
+            border-radius: 3px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 12px;
+        }
+        button {
+            background: #00ff00;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+        button:hover:not(:disabled) {
+            background: #00cc00;
+        }
+        .progress {
+            width: 100%;
+            height: 20px;
+            background: #333;
+            margin: 10px 0;
+        }
+        .progress-bar {
+            height: 100%;
+            background: #00ff00;
+            transition: width 0.3s;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎤 Voice Control Diagnostic Test</h1>
+    <p>Testing WebSocket connection to Google GenAI and voice capture functionality</p>
+
+    <div class="section">
+        <h2>1. Environment Check</h2>
+        <div id="env-status"></div>
+    </div>
+
+    <div class="section">
+        <h2>2. WebSocket Connection Test</h2>
+        <div id="ws-status"></div>
+        <button id="test-ws" onclick="testWebSocket()">Test WebSocket Connection</button>
+        <div id="ws-log" class="log"></div>
+    </div>
+
+    <div class="section">
+        <h2>3. Microphone Access Test</h2>
+        <div id="mic-status"></div>
+        <button id="test-mic" onclick="testMicrophone()">Test Microphone Access</button>
+        <div id="mic-log" class="log"></div>
+    </div>
+
+    <div class="section">
+        <h2>4. Voice Capture Test</h2>
+        <div id="voice-status"></div>
+        <button id="start-capture" onclick="startVoiceCapture()" disabled>Start Voice Capture</button>
+        <button id="stop-capture" onclick="stopVoiceCapture()" disabled>Stop Voice Capture</button>
+        <div class="progress">
+            <div id="audio-level" class="progress-bar" style="width: 0%"></div>
+        </div>
+        <div id="voice-log" class="log"></div>
+    </div>
+
+    <div class="section">
+        <h2>5. Transcription Test</h2>
+        <div id="transcription-status"></div>
+        <div id="transcription-log" class="log"></div>
+    </div>
+
+    <div class="section">
+        <h2>6. Full Integration Test</h2>
+        <div id="integration-status"></div>
+        <button id="full-test" onclick="runFullTest()">Run Full Voice Control Test</button>
+        <div id="integration-log" class="log"></div>
+    </div>
+
+    <div class="section">
+        <h2>Test Summary</h2>
+        <div id="summary"></div>
+    </div>
+
+    <script>
+        let ws = null;
+        let mediaRecorder = null;
+        let audioContext = null;
+        let analyser = null;
+        let isRecording = false;
+        let testResults = {
+            env: false,
+            websocket: false,
+            microphone: false,
+            voiceCapture: false,
+            transcription: false,
+            integration: false
+        };
+
+        // Environment Check
+        function checkEnvironment() {
+            const status = document.getElementById('env-status');
+            let results = [];
+
+            // Check HTTPS (required for microphone access)
+            const isSecure = window.location.protocol === 'https:' || window.location.hostname === 'localhost';
+            results.push({
+                status: isSecure ? 'success' : 'error',
+                message: `Protocol: ${window.location.protocol} (${isSecure ? '✓' : '✗'})`
+            });
+
+            // Check Web Speech API
+            const speechRecognitionSupported = 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window;
+            results.push({
+                status: speechRecognitionSupported ? 'success' : 'warning',
+                message: `Web Speech API: ${speechRecognitionSupported ? '✓ Supported' : '✗ Not supported'}`
+            });
+
+            // Check MediaRecorder API
+            const mediaRecorderSupported = 'MediaRecorder' in window;
+            results.push({
+                status: mediaRecorderSupported ? 'success' : 'error',
+                message: `MediaRecorder API: ${mediaRecorderSupported ? '✓ Supported' : '✗ Not supported'}`
+            });
+
+            // Check WebSocket
+            const wsSupported = 'WebSocket' in window;
+            results.push({
+                status: wsSupported ? 'success' : 'error',
+                message: `WebSocket API: ${wsSupported ? '✓ Supported' : '✗ Not supported'}`
+            });
+
+            testResults.env = results.every(r => r.status !== 'error');
+
+            status.innerHTML = results.map(r =>
+                `<div class="status ${r.status}">${r.message}</div>`
+            ).join('');
+        }
+
+        // WebSocket Test
+        async function testWebSocket() {
+            const status = document.getElementById('ws-status');
+            const log = document.getElementById('ws-log');
+            const button = document.getElementById('test-ws');
+
+            button.disabled = true;
+            log.innerHTML = 'Testing WebSocket connection...<br>';
+
+            try {
+                // Test connection to the dev server
+                const wsUrl = 'ws://localhost:3000';
+                log.innerHTML += `Connecting to ${wsUrl}...<br>`;
+
+                ws = new WebSocket(wsUrl);
+
+                ws.onopen = () => {
+                    log.innerHTML += `✓ WebSocket connected successfully<br>`;
+                    status.innerHTML = '<div class="status success">✓ WebSocket Connection: SUCCESS</div>';
+                    testResults.websocket = true;
+                    button.disabled = false;
+                };
+
+                ws.onerror = (error) => {
+                    log.innerHTML += `✗ WebSocket error: ${error}<br>`;
+                    status.innerHTML = '<div class="status error">✗ WebSocket Connection: FAILED</div>';
+                    testResults.websocket = false;
+                    button.disabled = false;
+                };
+
+                ws.onclose = () => {
+                    log.innerHTML += `WebSocket closed<br>`;
+                };
+
+                // Timeout after 5 seconds
+                setTimeout(() => {
+                    if (ws.readyState !== WebSocket.OPEN) {
+                        log.innerHTML += `✗ WebSocket connection timeout<br>`;
+                        status.innerHTML = '<div class="status error">✗ WebSocket Connection: TIMEOUT</div>';
+                        testResults.websocket = false;
+                        button.disabled = false;
+                    }
+                }, 5000);
+
+            } catch (error) {
+                log.innerHTML += `✗ WebSocket test failed: ${error.message}<br>`;
+                status.innerHTML = '<div class="status error">✗ WebSocket Connection: FAILED</div>';
+                testResults.websocket = false;
+                button.disabled = false;
+            }
+        }
+
+        // Microphone Test
+        async function testMicrophone() {
+            const status = document.getElementById('mic-status');
+            const log = document.getElementById('mic-log');
+            const button = document.getElementById('test-mic');
+
+            button.disabled = true;
+            log.innerHTML = 'Testing microphone access...<br>';
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                log.innerHTML += `✓ Microphone access granted<br>`;
+                log.innerHTML += `✓ Audio stream obtained<br>`;
+
+                // Get audio devices
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const audioInputs = devices.filter(d => d.kind === 'audioinput');
+                log.innerHTML += `✓ Found ${audioInputs.length} audio input device(s):<br>`;
+                audioInputs.forEach((device, i) => {
+                    log.innerHTML += `  ${i + 1}. ${device.label || 'Unknown device'}<br>`;
+                });
+
+                // Stop the stream
+                stream.getTracks().forEach(track => track.stop());
+
+                status.innerHTML = '<div class="status success">✓ Microphone Access: SUCCESS</div>';
+                testResults.microphone = true;
+
+                // Enable voice capture buttons
+                document.getElementById('start-capture').disabled = false;
+
+            } catch (error) {
+                log.innerHTML += `✗ Microphone test failed: ${error.message}<br>`;
+                status.innerHTML = '<div class="status error">✗ Microphone Access: FAILED</div>';
+                testResults.microphone = false;
+            }
+
+            button.disabled = false;
+        }
+
+        // Voice Capture Test
+        async function startVoiceCapture() {
+            const status = document.getElementById('voice-status');
+            const log = document.getElementById('voice-log');
+            const startButton = document.getElementById('start-capture');
+            const stopButton = document.getElementById('stop-capture');
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                audioContext = new AudioContext();
+                analyser = audioContext.createAnalyser();
+                const source = audioContext.createMediaStreamSource(stream);
+                source.connect(analyser);
+
+                mediaRecorder = new MediaRecorder(stream);
+                const chunks = [];
+
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0) {
+                        chunks.push(event.data);
+                        log.innerHTML += `Received audio chunk: ${event.data.size} bytes<br>`;
+                    }
+                };
+
+                mediaRecorder.onstop = () => {
+                    const blob = new Blob(chunks, { type: 'audio/webm' });
+                    log.innerHTML += `Recording stopped. Total size: ${blob.size} bytes<br>`;
+                    log.innerHTML += `Sample rate: ${audioContext.sampleRate} Hz<br>`;
+                };
+
+                mediaRecorder.start();
+                isRecording = true;
+
+                // Visualize audio level
+                analyser.fftSize = 256;
+                const bufferLength = analyser.frequencyBinCount;
+                const dataArray = new Uint8Array(bufferLength);
+
+                function updateAudioLevel() {
+                    if (!isRecording) return;
+
+                    analyser.getByteFrequencyData(dataArray);
+                    const average = dataArray.reduce((a, b) => a + b) / bufferLength;
+                    const level = Math.min(100, (average / 128) * 100);
+                    document.getElementById('audio-level').style.width = `${level}%`;
+
+                    requestAnimationFrame(updateAudioLevel);
+                }
+
+                updateAudioLevel();
+
+                status.innerHTML = '<div class="status success">✓ Voice Capture: RECORDING</div>';
+                startButton.disabled = true;
+                stopButton.disabled = false;
+                log.innerHTML += `Voice capture started at ${new Date().toLocaleTimeString()}<br>`;
+
+            } catch (error) {
+                log.innerHTML += `✗ Failed to start voice capture: ${error.message}<br>`;
+                status.innerHTML = '<div class="status error">✗ Voice Capture: FAILED</div>';
+                testResults.voiceCapture = false;
+            }
+        }
+
+        function stopVoiceCapture() {
+            if (mediaRecorder && isRecording) {
+                mediaRecorder.stop();
+                isRecording = false;
+
+                if (audioContext) {
+                    audioContext.close();
+                }
+
+                const status = document.getElementById('voice-status');
+                const log = document.getElementById('voice-log');
+                const startButton = document.getElementById('start-capture');
+                const stopButton = document.getElementById('stop-capture');
+
+                status.innerHTML = '<div class="status info">⏹ Voice Capture: STOPPED</div>';
+                startButton.disabled = false;
+                stopButton.disabled = true;
+                log.innerHTML += `Voice capture stopped at ${new Date().toLocaleTimeString()}<br>`;
+
+                testResults.voiceCapture = true;
+            }
+        }
+
+        // Full Integration Test
+        async function runFullTest() {
+            const status = document.getElementById('integration-status');
+            const log = document.getElementById('integration-log');
+            const button = document.getElementById('full-test');
+
+            button.disabled = true;
+            log.innerHTML = 'Starting full integration test...<br>';
+
+            try {
+                // Step 1: Test API endpoint
+                log.innerHTML += 'Step 1: Testing voice classify API...<br>';
+                const classifyResponse = await fetch('/api/voice/classify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ transcription: 'zoom in on the prefrontal cortex' })
+                });
+
+                if (classifyResponse.ok) {
+                    const classifyData = await classifyResponse.json();
+                    log.innerHTML += `✓ Classify API response: ${JSON.stringify(classifyData)}<br>`;
+                } else {
+                    log.innerHTML += `✗ Classify API failed: ${classifyResponse.status}<br>`;
+                }
+
+                // Step 2: Test embed API
+                log.innerHTML += 'Step 2: Testing embed API...<br>';
+                const embedResponse = await fetch('/api/voice/embed', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: 'prefrontal cortex' })
+                });
+
+                if (embedResponse.ok) {
+                    const embedData = await embedResponse.json();
+                    log.innerHTML += `✓ Embed API response: embedding dimension ${embedData.embedding?.length || 0}<br>`;
+                } else {
+                    log.innerHTML += `✗ Embed API failed: ${embedResponse.status}<br>`;
+                }
+
+                // Step 3: Test match API
+                log.innerHTML += 'Step 3: Testing match API...<br>';
+                const matchResponse = await fetch('/api/voice/match', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query: 'prefrontal cortex' })
+                });
+
+                if (matchResponse.ok) {
+                    const matchData = await matchResponse.json();
+                    log.innerHTML += `✓ Match API response: ${JSON.stringify(matchData)}<br>`;
+                } else {
+                    log.innerHTML += `✗ Match API failed: ${matchResponse.status}<br>`;
+                }
+
+                testResults.integration = true;
+                status.innerHTML = '<div class="status success">✓ Integration Test: PASSED</div>';
+
+            } catch (error) {
+                log.innerHTML += `✗ Integration test failed: ${error.message}<br>`;
+                status.innerHTML = '<div class="status error">✗ Integration Test: FAILED</div>';
+                testResults.integration = false;
+            }
+
+            button.disabled = false;
+            updateSummary();
+        }
+
+        // Update Summary
+        function updateSummary() {
+            const summary = document.getElementById('summary');
+            const totalTests = Object.keys(testResults).length;
+            const passedTests = Object.values(testResults).filter(v => v).length;
+
+            let html = `<h3>Test Results: ${passedTests}/${totalTests} passed</h3>`;
+            html += '<ul>';
+            html += `<li>Environment: ${testResults.env ? '✓' : '✗'}</li>`;
+            html += `<li>WebSocket: ${testResults.websocket ? '✓' : '✗'}</li>`;
+            html += `<li>Microphone: ${testResults.microphone ? '✓' : '✗'}</li>`;
+            html += `<li>Voice Capture: ${testResults.voiceCapture ? '✓' : '✗'}</li>`;
+            html += `<li>Transcription: ${testResults.transcription ? '✓' : '✗'}</li>`;
+            html += `<li>Integration: ${testResults.integration ? '✓' : '✗'}</li>`;
+            html += '</ul>';
+
+            if (passedTests === totalTests) {
+                html += '<div class="status success">🎉 All tests passed! Voice control is working.</div>';
+            } else if (passedTests >= totalTests / 2) {
+                html += '<div class="status warning">⚠️ Some tests failed. Voice control may work with limitations.</div>';
+            } else {
+                html += '<div class="status error">❌ Multiple tests failed. Voice control needs attention.</div>';
+            }
+
+            summary.innerHTML = html;
+        }
+
+        // Initialize on load
+        window.onload = () => {
+            checkEnvironment();
+        };
+    </script>
+</body>
+</html>
