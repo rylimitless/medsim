@@ -6,6 +6,7 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import type { ThreeEvent } from "@react-three/fiber";
 import { FilesetResolver, GestureRecognizer } from "@mediapipe/tasks-vision";
+import useRotationControls from "./functions/use_rotations";
 
 type NormalizedLandmark = {
   x: number;
@@ -13,6 +14,28 @@ type NormalizedLandmark = {
   z?: number;
   visibility?: number;
 };
+
+type TooltipState = {
+  time: number;
+  distance: number;
+  name: string;
+  point: THREE.Vector3;
+};
+
+type GestureCategory = {
+  categoryName?: string;
+  displayName?: string;
+  score?: number;
+};
+
+type GestureList = GestureCategory[][];
+
+const ENABLE_MESH_TOOLTIP = false;
+const POINTING_GESTURE = "Pointing_Up";
+const MIN_CUT_DISTANCE = 0.01;
+const MAX_CUT_POINTS = 6000;
+const INDEX_DIP = 7;
+const INDEX_TIP = 8;
 
 const LANDMARK_COUNT = 21;
 
@@ -42,39 +65,18 @@ const HAND_CONNECTIONS: Array<[number, number]> = [
   [13, 17],
 ];
 
-function useRotationControls(
-  targetRef: React.RefObject<THREE.Object3D | null>,
-) {
-  const applyRotation = useCallback(
-    (dx: number, dy: number) => {
-      const target = targetRef.current;
-      if (!target) return;
-
-      target.rotation.y += dx * 0.01;
-      target.rotation.x += dy * 0.01;
-
-      target.rotation.x = THREE.MathUtils.clamp(
-        target.rotation.x,
-        -Math.PI / 2,
-        Math.PI / 2,
-      );
-    },
-    [targetRef],
-  );
-
-  return { applyRotation };
-}
-
 function Model({
   modelRef,
+  meshListRef,
 }: {
   modelRef: React.RefObject<THREE.Group | null>;
+  meshListRef: React.MutableRefObject<THREE.Object3D[]>;
 }) {
   const gltf = useLoader(GLTFLoader, "/model/model2.glb");
   const dragging = useRef(false);
   const last = useRef({ x: 0, y: 0 });
 
-  const { applyRotation } = useRotationControls(modelRef);
+  const { applyRotation } = useRotationControls(modelRef); //useRotationControls(modelRef);
 
   useEffect(() => {
     if (!gltf.scene) return;
@@ -91,7 +93,15 @@ function Model({
 
     gltf.scene.scale.setScalar(scale);
     gltf.scene.position.sub(center.multiplyScalar(scale));
-  }, [gltf]);
+
+    const meshes: THREE.Object3D[] = [];
+    gltf.scene.traverse((obj) => {
+      if ((obj as THREE.Mesh).isMesh) {
+        meshes.push(obj);
+      }
+    });
+    meshListRef.current = meshes;
+  }, [gltf, meshListRef]);
 
   const onPointerDown = (e: ThreeEvent<PointerEvent>) => {
     dragging.current = true;
@@ -129,7 +139,13 @@ function Model({
 function HandMesh({
   handIndex,
   landmarksRef,
+  gesturesRef,
+  cutPointsRef,
+  lastCutPointRef,
   modelRef,
+  meshListRef,
+  tooltipRef,
+  tooltipStateRef,
   mirror = true,
   depthScale = 0.8,
   minZ = 0.15,
@@ -142,7 +158,13 @@ function HandMesh({
 }: {
   handIndex: number;
   landmarksRef: React.MutableRefObject<NormalizedLandmark[][]>;
+  gesturesRef: React.MutableRefObject<GestureList>;
+  cutPointsRef: React.MutableRefObject<THREE.Vector3[]>;
+  lastCutPointRef: React.MutableRefObject<Array<THREE.Vector3 | null>>;
   modelRef: React.RefObject<THREE.Group | null>;
+  meshListRef: React.MutableRefObject<THREE.Object3D[]>;
+  tooltipRef: React.RefObject<HTMLDivElement | null>;
+  tooltipStateRef: React.MutableRefObject<TooltipState>;
   mirror?: boolean;
   depthScale?: number;
   minZ?: number;
@@ -170,9 +192,20 @@ function HandMesh({
   const tempQuatRef = useRef(new THREE.Quaternion());
   const tempScaleRef = useRef(new THREE.Vector3());
   const modelBoxRef = useRef(new THREE.Box3());
-  const hitRef = useRef(new THREE.Vector3());
+  const modelSphereRef = useRef(new THREE.Sphere());
+  const sphereHitRef = useRef(new THREE.Vector3());
+  const boxHitRef = useRef(new THREE.Vector3());
+  const hitResultsRef = useRef<THREE.Intersection[]>([]);
+  const projectedRef = useRef(new THREE.Vector3());
+  const scalpelRef = useRef<THREE.Group>(null);
+  const scalpelDirRef = useRef(new THREE.Vector3());
+  const scalpelQuatRef = useRef(new THREE.Quaternion());
+  const scalpelUpRef = useRef(new THREE.Vector3(0, 1, 0));
+  const scalpelRaycasterRef = useRef(new THREE.Raycaster());
+  const scalpelDirNegRef = useRef(new THREE.Vector3());
+  const indexTipHitRef = useRef(new THREE.Vector3());
 
-  useFrame(({ camera }) => {
+  useFrame(({ camera, clock, size }) => {
     const landmarks = landmarksRef.current[handIndex];
     const pointsMesh = pointsRef.current;
     const connectionsMesh = connectionsRef.current;
@@ -188,13 +221,44 @@ function HandMesh({
     const tempQuat = tempQuatRef.current;
     const tempScale = tempScaleRef.current;
     const model = modelRef.current;
+    const meshes = meshListRef.current;
     const modelBox = modelBoxRef.current;
-    const hitPoint = hitRef.current;
+    const modelSphere = modelSphereRef.current;
+    const sphereHit = sphereHitRef.current;
+    const boxHit = boxHitRef.current;
+    const hitResults = hitResultsRef.current;
+    const tooltipState = tooltipStateRef.current;
+    const tooltipEl = tooltipRef.current;
+    const projected = projectedRef.current;
+    const gestures = gesturesRef.current;
+    const cutPoints = cutPointsRef.current;
+    const lastCutPoint = lastCutPointRef.current;
+    const scalpel = scalpelRef.current;
+    const scalpelDir = scalpelDirRef.current;
+    const scalpelQuat = scalpelQuatRef.current;
+    const scalpelUp = scalpelUpRef.current;
+    const scalpelRaycaster = scalpelRaycasterRef.current;
+    const scalpelDirNeg = scalpelDirNegRef.current;
+    const indexTipHit = indexTipHitRef.current;
 
-    const hasModel = Boolean(model);
+    if (ENABLE_MESH_TOOLTIP) {
+      const time = clock.getElapsedTime();
+      if (tooltipState.time !== time) {
+        tooltipState.time = time;
+        tooltipState.distance = Number.POSITIVE_INFINITY;
+        tooltipState.name = "";
+      }
+    }
+
+    const hasModel = Boolean(model && meshes.length > 0);
     if (hasModel) {
       modelBox.setFromObject(model as THREE.Object3D);
+      modelBox.getBoundingSphere(modelSphere);
     }
+
+    const gesture = gestures?.[handIndex]?.[0];
+    const gestureName = gesture?.categoryName ?? gesture?.displayName ?? "";
+    let tipHitValid = false;
 
     if (!pointsMesh || !connectionsMesh) return;
 
@@ -236,16 +300,86 @@ function HandMesh({
       out.z = THREE.MathUtils.clamp(out.z, minZ, maxZ);
 
       if (hasModel) {
-        const hit = raycaster.ray.intersectBox(modelBox, hitPoint);
-        if (hit) {
+        const boxHitPoint = raycaster.ray.intersectBox(modelBox, boxHit);
+        if (boxHitPoint) {
           const outDist = camera.position.distanceTo(out);
-          const hitDist = camera.position.distanceTo(hit);
+          const hitDist = camera.position.distanceTo(boxHitPoint);
           if (outDist > hitDist) {
             out
-              .copy(hit)
+              .copy(boxHitPoint)
               .addScaledVector(raycaster.ray.direction, -collisionOffset);
           }
         }
+
+        if (i === INDEX_TIP) {
+          if (raycaster.ray.intersectSphere(modelSphere, sphereHit)) {
+            hitResults.length = 0;
+            raycaster.intersectObjects(meshes, false, hitResults);
+
+            if (hitResults.length > 0) {
+              const hit = hitResults[0];
+              indexTipHit.copy(hit.point);
+              tipHitValid = true;
+            }
+          }
+        }
+      }
+    }
+
+    const cutEnabled = tipHitValid;
+
+    if (!cutEnabled) {
+      lastCutPoint[handIndex] = null;
+    }
+
+    if (cutEnabled && hasModel) {
+      const hitPoint = indexTipHit;
+
+      const last = lastCutPoint[handIndex];
+      if (!last || last.distanceTo(hitPoint) > MIN_CUT_DISTANCE) {
+        if (last) {
+          cutPoints.push(last.clone(), hitPoint.clone());
+          if (cutPoints.length > MAX_CUT_POINTS) {
+            cutPoints.splice(0, cutPoints.length - MAX_CUT_POINTS);
+          }
+        }
+        lastCutPoint[handIndex] = hitPoint.clone();
+      }
+    }
+
+    if (scalpel) {
+      if (cutEnabled) {
+        const tip = worldPositions[INDEX_TIP];
+        const base = worldPositions[INDEX_DIP] ?? tip;
+        scalpelDir.copy(tip).sub(base);
+        if (scalpelDir.lengthSq() > 0.000001) {
+          scalpelDir.normalize();
+          scalpelQuat.setFromUnitVectors(scalpelUp, scalpelDir);
+          scalpel.position.copy(tip);
+          scalpel.quaternion.copy(scalpelQuat);
+          scalpel.visible = true;
+        } else {
+          scalpel.visible = false;
+        }
+      } else {
+        scalpel.visible = false;
+      }
+    }
+
+    if (tooltipEl) {
+      if (
+        ENABLE_MESH_TOOLTIP &&
+        tooltipState.distance !== Number.POSITIVE_INFINITY
+      ) {
+        projected.copy(tooltipState.point).project(camera);
+        const x = (projected.x * 0.5 + 0.5) * size.width;
+        const y = (-projected.y * 0.5 + 0.5) * size.height;
+
+        tooltipEl.textContent = tooltipState.name || "Mesh";
+        tooltipEl.style.opacity = "1";
+        tooltipEl.style.transform = `translate(${x}px, ${y}px) translate(-50%, -120%)`;
+      } else {
+        tooltipEl.style.opacity = "0";
       }
     }
 
@@ -302,22 +436,202 @@ function HandMesh({
         <cylinderGeometry args={[1, 1, 1, 8]} />
         <meshBasicMaterial color={lineColor} />
       </instancedMesh>
+      <group ref={scalpelRef} visible={false}>
+        <mesh position={[0, -0.08, 0]}>
+          <cylinderGeometry args={[0.004, 0.004, 0.12, 8]} />
+          <meshStandardMaterial
+            color="#dfe6e9"
+            metalness={0.7}
+            roughness={0.2}
+          />
+        </mesh>
+        <mesh position={[0, -0.02, 0]}>
+          <coneGeometry args={[0.006, 0.04, 8]} />
+          <meshStandardMaterial
+            color="#b2bec3"
+            metalness={0.8}
+            roughness={0.2}
+          />
+        </mesh>
+      </group>
     </group>
+  );
+}
+
+function CutLines({
+  cutPointsRef,
+}: {
+  cutPointsRef: React.MutableRefObject<THREE.Vector3[]>;
+}) {
+  const geometryRef = useRef<THREE.BufferGeometry>(null);
+  const positionsRef = useRef<Float32Array>(
+    new Float32Array(MAX_CUT_POINTS * 3),
+  );
+
+  useEffect(() => {
+    const geom = geometryRef.current;
+    if (!geom) return;
+
+    const attr = new THREE.BufferAttribute(positionsRef.current, 3);
+    geom.setAttribute("position", attr);
+    geom.setDrawRange(0, 0);
+  }, []);
+
+  useFrame(() => {
+    const geom = geometryRef.current;
+    if (!geom) return;
+
+    const points = cutPointsRef.current;
+    const count = Math.min(points.length, MAX_CUT_POINTS);
+    const positions = positionsRef.current;
+
+    for (let i = 0; i < count; i += 1) {
+      const p = points[i];
+      const idx = i * 3;
+      positions[idx] = p.x;
+      positions[idx + 1] = p.y;
+      positions[idx + 2] = p.z;
+    }
+
+    geom.setDrawRange(0, count);
+    const attr = geom.getAttribute("position") as THREE.BufferAttribute;
+    attr.needsUpdate = true;
+  });
+
+  return (
+    <lineSegments>
+      <bufferGeometry ref={geometryRef} />
+      <lineBasicMaterial color="#ff2d2d" linewidth={2} />
+    </lineSegments>
   );
 }
 
 function HandSkeleton3D({
   landmarksRef,
+  gesturesRef,
+  cutPointsRef,
+  lastCutPointRef,
   modelRef,
+  meshListRef,
+  tooltipRef,
+  tooltipStateRef,
 }: {
   landmarksRef: React.MutableRefObject<NormalizedLandmark[][]>;
+  gesturesRef: React.MutableRefObject<GestureList>;
+  cutPointsRef: React.MutableRefObject<THREE.Vector3[]>;
+  lastCutPointRef: React.MutableRefObject<Array<THREE.Vector3 | null>>;
   modelRef: React.RefObject<THREE.Group | null>;
+  meshListRef: React.MutableRefObject<THREE.Object3D[]>;
+  tooltipRef: React.RefObject<HTMLDivElement | null>;
+  tooltipStateRef: React.MutableRefObject<TooltipState>;
 }) {
   return (
     <>
-      <HandMesh handIndex={0} landmarksRef={landmarksRef} modelRef={modelRef} />
-      <HandMesh handIndex={1} landmarksRef={landmarksRef} modelRef={modelRef} />
+      <HandMesh
+        handIndex={0}
+        landmarksRef={landmarksRef}
+        gesturesRef={gesturesRef}
+        cutPointsRef={cutPointsRef}
+        lastCutPointRef={lastCutPointRef}
+        modelRef={modelRef}
+        meshListRef={meshListRef}
+        tooltipRef={tooltipRef}
+        tooltipStateRef={tooltipStateRef}
+      />
+      <HandMesh
+        handIndex={1}
+        landmarksRef={landmarksRef}
+        gesturesRef={gesturesRef}
+        cutPointsRef={cutPointsRef}
+        lastCutPointRef={lastCutPointRef}
+        modelRef={modelRef}
+        meshListRef={meshListRef}
+        tooltipRef={tooltipRef}
+        tooltipStateRef={tooltipStateRef}
+      />
     </>
+  );
+}
+
+function TopBar() {
+  return (
+    <div className="pointer-events-auto absolute left-6 right-6 top-4 flex items-center justify-between rounded-2xl bg-black/40 px-4 py-3 text-white shadow-lg backdrop-blur">
+      <div className="flex items-center gap-3">
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500/20">
+          <span className="text-lg">🧠</span>
+        </div>
+        <div>
+          <p className="text-sm font-semibold">
+            AI Neurosurgical Training Simulator
+          </p>
+          <p className="text-xs text-white/60">Advanced Diagnostics v2.0</p>
+        </div>
+      </div>
+      <div className="flex items-center gap-3">
+        <button className="rounded-full bg-blue-500/20 px-4 py-2 text-xs font-semibold text-blue-200">
+          Explore Mode
+        </button>
+        <button className="h-9 w-9 rounded-full bg-white/10 text-white/70">
+          🔔
+        </button>
+        <button className="h-9 w-9 rounded-full bg-white/10 text-white/70">
+          ⚙️
+        </button>
+        <div className="h-9 w-9 rounded-full bg-white/10" />
+      </div>
+    </div>
+  );
+}
+
+function LeftRail() {
+  return (
+    <div className="pointer-events-auto absolute left-4 top-24 flex flex-col gap-3 rounded-2xl bg-black/40 p-3 text-white shadow-lg backdrop-blur">
+      <button className="h-10 w-10 rounded-xl bg-blue-500/20">🧭</button>
+      <button className="h-10 w-10 rounded-xl bg-white/10">🧪</button>
+      <button className="h-10 w-10 rounded-xl bg-white/10">🧠</button>
+      <button className="h-10 w-10 rounded-xl bg-white/10">🔗</button>
+    </div>
+  );
+}
+
+function RightRail() {
+  return (
+    <div className="pointer-events-auto absolute right-4 top-1/2 flex -translate-y-1/2 flex-col gap-2 rounded-2xl bg-black/40 p-3 text-white shadow-lg backdrop-blur">
+      <button className="h-9 w-9 rounded-lg bg-white/10 text-lg">+</button>
+      <button className="h-9 w-9 rounded-lg bg-white/10 text-lg">−</button>
+      <button className="h-9 w-9 rounded-lg bg-white/10 text-sm">3D</button>
+    </div>
+  );
+}
+
+function VitalsCard() {
+  return (
+    <div className="pointer-events-auto rounded-2xl bg-black/50 p-4 text-white shadow-lg backdrop-blur">
+      <p className="text-xs font-semibold text-white/70">VITALS</p>
+      <div className="mt-3 flex items-end justify-between">
+        <div className="text-lg font-semibold">72 BPM</div>
+        <div className="rounded-full bg-emerald-500/20 px-3 py-1 text-[11px] text-emerald-300">
+          STABLE
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RiskCard() {
+  return (
+    <div className="pointer-events-auto rounded-2xl bg-black/50 p-4 text-white shadow-lg backdrop-blur">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-semibold">Surgical Risk</p>
+        <p className="text-sm font-semibold text-blue-300">40%</p>
+      </div>
+      <div className="mt-3 h-1.5 w-full rounded-full bg-white/10">
+        <div className="h-1.5 w-2/5 rounded-full bg-blue-400" />
+      </div>
+      <p className="mt-3 text-xs text-amber-300">
+        Caution: Motor cortex proximity
+      </p>
+    </div>
   );
 }
 
@@ -325,9 +639,20 @@ export default function ModelPage() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const recognizerRef = useRef<GestureRecognizer | null>(null);
   const modelRef = useRef<THREE.Group | null>(null);
+  const meshListRef = useRef<THREE.Object3D[]>([]);
+  const tooltipRef = useRef<HTMLDivElement | null>(null);
+  const tooltipStateRef = useRef<TooltipState>({
+    time: -1,
+    distance: Number.POSITIVE_INFINITY,
+    name: "",
+    point: new THREE.Vector3(),
+  });
   const rafRef = useRef<number | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const landmarksRef = useRef<NormalizedLandmark[][]>([]);
+  const gesturesRef = useRef<GestureList>([]);
+  const cutPointsRef = useRef<THREE.Vector3[]>([]);
+  const lastCutPointRef = useRef<Array<THREE.Vector3 | null>>([null, null]);
 
   useEffect(() => {
     let mounted = true;
@@ -368,9 +693,9 @@ export default function ModelPage() {
         },
         runningMode: "VIDEO",
         numHands: 2,
-        minHandDetectionConfidence: 0.3,
-        minHandPresenceConfidence: 0.3,
-        minTrackingConfidence: 0.3,
+        minHandDetectionConfidence: 0.01,
+        minHandPresenceConfidence: 0.01,
+        minTrackingConfidence: 0.01,
       });
 
       recognizerRef.current = recognizer;
@@ -381,6 +706,7 @@ export default function ModelPage() {
           const now = performance.now();
           const result = recognizerRef.current.recognizeForVideo(video, now);
           landmarksRef.current = result.landmarks ?? [];
+          gesturesRef.current = result.gestures ?? [];
         }
         rafRef.current = requestAnimationFrame(loop);
       };
@@ -410,7 +736,7 @@ export default function ModelPage() {
   return (
     <div className="relative h-screen w-screen bg-black">
       <Canvas
-        camera={{ position: [0, 0, 3], fov: 45 }}
+        camera={{ position: [0, 0, 2.6], fov: 45 }}
         style={{ width: "100%", height: "100%" }}
       >
         <color attach="background" args={["#2b2b2b"]} />
@@ -419,15 +745,46 @@ export default function ModelPage() {
         <directionalLight position={[3, 3, 3]} intensity={1.2} />
 
         <Suspense fallback={null}>
-          <Model modelRef={modelRef} />
+          <Model modelRef={modelRef} meshListRef={meshListRef} />
         </Suspense>
 
-        <HandSkeleton3D landmarksRef={landmarksRef} modelRef={modelRef} />
+        <CutLines cutPointsRef={cutPointsRef} />
+
+        <HandSkeleton3D
+          landmarksRef={landmarksRef}
+          gesturesRef={gesturesRef}
+          cutPointsRef={cutPointsRef}
+          lastCutPointRef={lastCutPointRef}
+          modelRef={modelRef}
+          meshListRef={meshListRef}
+          tooltipRef={tooltipRef}
+          tooltipStateRef={tooltipStateRef}
+        />
       </Canvas>
 
+      <TopBar />
+      <LeftRail />
+      <RightRail />
+
+      <div className="pointer-events-none absolute left-1/2 top-24 w-[420px] -translate-x-1/2 rounded-2xl bg-black/40 px-4 py-2 text-xs text-white/60 shadow-lg backdrop-blur">
+        Search anatomical structures...
+      </div>
+
+      <div className="pointer-events-none absolute bottom-6 left-6 w-56">
+        <VitalsCard />
+      </div>
+
+      <div className="pointer-events-none absolute bottom-6 right-6 w-64">
+        <RiskCard />
+      </div>
+
+      <div
+        ref={tooltipRef}
+        className="pointer-events-none absolute left-0 top-0 rounded-md bg-black/80 px-2 py-1 text-xs text-white opacity-0 shadow-lg"
+      />
       <video
         ref={videoRef}
-        className="pointer-events-none absolute top-3 right-3 h-36 w-48 transform -scale-x-100 rounded-md border border-white/30 object-cover shadow-lg"
+        className="pointer-events-none absolute top-20 right-6 h-36 w-48 transform -scale-x-100 rounded-md border border-white/30 object-cover shadow-lg"
         playsInline
         muted
       />
