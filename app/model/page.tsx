@@ -889,45 +889,10 @@ function TopBar() {
           <span className="text-lg">🧠</span>
         </div>
         <div>
-          <p className="text-sm font-semibold">
-            AI Neurosurgical Training Simulator
-          </p>
-          <p className="text-xs text-white/60">Advanced Diagnostics v2.0</p>
+          <p className="text-sm font-semibold">MedSim</p>
+          <p className="text-xs text-white/60">v1.0</p>
         </div>
       </div>
-      <div className="flex items-center gap-3">
-        <button className="rounded-full bg-blue-500/20 px-4 py-2 text-xs font-semibold text-blue-200">
-          Explore Mode
-        </button>
-        <button className="h-9 w-9 rounded-full bg-white/10 text-white/70">
-          🔔
-        </button>
-        <button className="h-9 w-9 rounded-full bg-white/10 text-white/70">
-          ⚙️
-        </button>
-        <div className="h-9 w-9 rounded-full bg-white/10" />
-      </div>
-    </div>
-  );
-}
-
-function LeftRail() {
-  return (
-    <div className="pointer-events-auto absolute left-4 top-24 flex flex-col gap-3 rounded-2xl bg-black/40 p-3 text-white shadow-lg backdrop-blur">
-      <button className="h-10 w-10 rounded-xl bg-blue-500/20">🧭</button>
-      <button className="h-10 w-10 rounded-xl bg-white/10">🧪</button>
-      <button className="h-10 w-10 rounded-xl bg-white/10">🧠</button>
-      <button className="h-10 w-10 rounded-xl bg-white/10">🔗</button>
-    </div>
-  );
-}
-
-function RightRail() {
-  return (
-    <div className="pointer-events-auto absolute right-4 top-1/2 flex -translate-y-1/2 flex-col gap-2 rounded-2xl bg-black/40 p-3 text-white shadow-lg backdrop-blur">
-      <button className="h-9 w-9 rounded-lg bg-white/10 text-lg">+</button>
-      <button className="h-9 w-9 rounded-lg bg-white/10 text-lg">−</button>
-      <button className="h-9 w-9 rounded-lg bg-white/10 text-sm">3D</button>
     </div>
   );
 }
@@ -948,10 +913,7 @@ function VitalsCard() {
 
 function VoiceCommandList() {
   const commands = [
-    { action: "highlight", example: "Highlight lingual" },
     { action: "select", example: "Select lingual" },
-    { action: "zoom", example: "Zoom in on lingual" },
-    { action: "rotate", example: "Rotate 45 degrees" },
     { action: "query", example: "What is this?" },
   ];
 
@@ -1553,14 +1515,12 @@ export default function ModelPage() {
       </Canvas>
 
       <TopBar />
-      <LeftRail />
-      <RightRail />
 
       <VoiceControlPanel />
 
-      <div className="pointer-events-none absolute left-1/2 top-24 w-[420px] -translate-x-1/2 rounded-2xl bg-black/40 px-4 py-2 text-xs text-white/60 shadow-lg backdrop-blur">
+      {/*<div className="pointer-events-none absolute left-1/2 top-24 w-[420px] -translate-x-1/2 rounded-2xl bg-black/40 px-4 py-2 text-xs text-white/60 shadow-lg backdrop-blur">
         Search anatomical structures...
-      </div>
+      </div>*/}
 
       <div className="pointer-events-none absolute bottom-6 right-6 w-80">
         <VoiceCommandList />

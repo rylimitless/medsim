@@ -1,8 +1,31 @@
+"use client";
+
 import Link from "next/link";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import InstructionsModal from "./components/InstructionsModal";
 
 export default function Home() {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const router = useRouter();
+
+  const handleLaunchClick = () => {
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+  };
+
+  const handleFinish = () => {
+    setIsModalOpen(false);
+    router.push("/model");
+  };
   return (
-    <div className="relative min-h-screen overflow-x-hidden bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 selection:bg-primary/30">
+    <div
+      className="relative min-h-screen overflow-x-hidden font-display text-slate-900 dark:text-slate-100 selection:bg-primary/30"
+      style={{ backgroundColor: "#1a1d23" }}
+    >
       {/* Navigation */}
       <header className="fixed top-0 w-full z-50 border-b border-white/5 bg-background-dark/80 backdrop-blur-md">
         <nav className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
@@ -34,12 +57,12 @@ export default function Home() {
               Who is It For
             </a>
           </div>
-          <Link
+          {/*<Link
             href="/model"
-            className="px-6 py-2 rounded-full border border-primary text-primary hover:bg-primary hover:text-white transition-all text-sm font-bold"
+            className="px-6 py-2 rounded-full border border-[#4682b4] text-white btn-blue hover:brightness-110 transition-all text-sm font-bold"
           >
             Launch Experience
-          </Link>
+          </Link>*/}
         </nav>
       </header>
 
@@ -54,7 +77,7 @@ export default function Home() {
                 Next Gen Training
               </span>
             </div>
-            <h1 className="text-7xl md:text-8xl font-serif font-bold mb-6 text-gradient italic leading-tight">
+            <h1 className="text-7xl md:text-8xl font-serif font-bold mb-6 heading-green italic leading-tight">
               MedSim
             </h1>
             <p className="font-display text-xl md:text-2xl text-slate-400 font-light max-w-lg leading-relaxed mb-6">
@@ -68,13 +91,13 @@ export default function Home() {
               safely practice procedures before operating on real patients.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
-              <Link
-                href="/model"
-                className="bg-primary text-white px-8 py-4 rounded-full font-bold hover:brightness-110 transition-all flex items-center justify-center gap-2 border border-primary"
+              <button
+                onClick={handleLaunchClick}
+                className="bg-[#4682b4] text-white px-8 py-4 rounded-full font-bold hover:brightness-110 transition-all flex items-center justify-center gap-2 border border-[#4682b4]"
               >
                 <span>Launch Experience</span>
                 <span className="material-symbols-outlined">arrow_forward</span>
-              </Link>
+              </button>
             </div>
           </div>
           <div className="relative aspect-square">
@@ -100,7 +123,7 @@ export default function Home() {
           </span>
           <h2 className="font-serif font-bold leading-tight text-slate-100 text-2xl md:text-4xl">
             Immersive 3D anatomy and AI-powered surgical simulation,{" "}
-            <span className="text-primary">
+            <span className="heading-green">
               built for the next generation of physicians.
             </span>{" "}
             <span className="text-slate-500">
@@ -156,7 +179,7 @@ export default function Home() {
               <h3 className="text-sm font-bold uppercase tracking-[0.3em] text-primary mb-4">
                 Capabilities
               </h3>
-              <h2 className="font-serif font-bold mb-8 text-gradient text-6xl">
+              <h2 className="font-serif font-bold mb-8 heading-green text-6xl">
                 Key Features
               </h2>
               <ul>
@@ -194,7 +217,7 @@ export default function Home() {
       <section className="px-6 py-20">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12">
-            <h2 className="text-5xl font-serif font-bold text-gradient mb-6">
+            <h2 className="text-5xl font-serif font-bold heading-green mb-6">
               Built for the Future of Medicine
             </h2>
             <p className="text-slate-400 max-w-2xl mx-auto">
@@ -209,7 +232,9 @@ export default function Home() {
                   school
                 </span>
               </div>
-              <h4 className="text-3xl font-bold mb-6">For Institutions</h4>
+              <h4 className="text-3xl font-bold mb-6 heading-green">
+                For Institutions
+              </h4>
               <p className="text-slate-400 text-lg mb-8 max-w-sm">
                 Replace expensive physical labs with scalable virtual centers.
                 Track student progress with enterprise-grade dashboards.
@@ -228,7 +253,9 @@ export default function Home() {
                   medical_services
                 </span>
               </div>
-              <h4 className="text-3xl font-bold mb-6">For Surgeons</h4>
+              <h4 className="text-3xl font-bold mb-6 heading-green">
+                For Surgeons
+              </h4>
               <p className="text-slate-400 text-lg mb-8 max-w-sm">
                 Practice complex or rare procedures before heading into the OR.
                 Maintain peak technical proficiency anywhere.
@@ -272,6 +299,12 @@ export default function Home() {
           </p>
         </div>
       </footer>
+
+      <InstructionsModal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        onFinish={handleFinish}
+      />
     </div>
   );
 }
