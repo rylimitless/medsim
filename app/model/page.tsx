@@ -881,7 +881,7 @@ function CameraFocusController({
   return null;
 }
 
-function TopBar() {
+function TopBar({ onReset }: { onReset: () => void }) {
   return (
     <div className="pointer-events-auto absolute left-6 right-6 top-4 flex items-center justify-between rounded-2xl bg-black/40 px-4 py-3 text-white shadow-lg backdrop-blur">
       <div className="flex items-center gap-3">
@@ -892,6 +892,14 @@ function TopBar() {
           <p className="text-sm font-semibold">MedSim</p>
           <p className="text-xs text-white/60">v1.0</p>
         </div>
+      </div>
+      <div className="flex items-center gap-2">
+        <button
+          onClick={onReset}
+          className="rounded-lg bg-white/10 px-3 py-2 text-xs font-medium text-white/70 hover:bg-white/20"
+        >
+          Reset scene
+        </button>
       </div>
     </div>
   );
@@ -1338,6 +1346,12 @@ export default function ModelPage() {
     [setMeshHighlight, setSelectionToast],
   );
 
+  const handleResetSelections = useCallback(() => {
+    if (typeof window !== "undefined") {
+      window.location.reload();
+    }
+  }, []);
+
   useEffect(() => {
     let mounted = true;
 
@@ -1470,12 +1484,13 @@ export default function ModelPage() {
   }, [isThumbsUpRight, isListening, startListening, stopListening]);
 
   return (
-    <div className="relative h-screen w-screen bg-black">
+    <div className="relative h-screen w-screen bg-gradient-to-b from-slate-950 via-slate-900 to-black">
       <Canvas
         camera={{ position: [0, 0, 2.6], fov: 45 }}
-        style={{ width: "100%", height: "100%" }}
+        gl={{ alpha: true }}
+        style={{ width: "100%", height: "100%", background: "transparent" }}
       >
-        <color attach="background" args={["#2b2b2b"]} />
+        {/* background handled by container gradient */}
         <ambientLight intensity={0.9} />
         <hemisphereLight args={["#ffffff", "#bdbdbd", 0.8]} />
         <directionalLight position={[3, 3, 3]} intensity={1.2} />
@@ -1514,7 +1529,7 @@ export default function ModelPage() {
         />
       </Canvas>
 
-      <TopBar />
+      <TopBar onReset={handleResetSelections} />
 
       <VoiceControlPanel />
 
