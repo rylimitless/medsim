@@ -1,0 +1,184 @@
+<!DOCTYPE html><html class="scroll-smooth" lang="en" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>How It Works - MedSim</title>
+<!-- Tailwind CSS v3 CDN with plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Google Fonts: Geist is a modern sans-serif, using Inter as a high-fidelity alternative if Geist is unavailable -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&amp;display=swap" rel="stylesheet">
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              blue: '#2e5fa3', // From Clinical Precision
+              orange: '#f15a24', // From Reference Image
+              surface: '#0b1326',
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'ui-sans-serif', 'system-ui'],
+          },
+          borderRadius: {
+            'custom': '1rem',
+          }
+        }
+      }
+    }
+  </script>
+<style data-purpose="custom-layouts">
+    /* Custom vertical line for the timeline */
+    .timeline-line {
+      position: absolute;
+      left: 11px; /* Center with the 24px width circle (11px + 2px line / 2) */
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background-color: #f15a24;
+      opacity: 0.3;
+    }
+    
+    /* Ensure images have the specific rounded cut-out look from reference */
+    .image-container {
+      position: relative;
+      border-radius: 40px;
+      overflow: hidden;
+    }
+    
+    .image-accent-blob {
+      position: absolute;
+      bottom: -20px;
+      right: -20px;
+      width: 150px;
+      height: 150px;
+      background-color: white;
+      border-radius: 50%;
+    }
+  </style>
+<style data-stitch-cursor=""></style><style data-stitch-scroll-lock=""></style></head>
+<body class="bg-white font-sans text-slate-900 antialiased">
+<!-- BEGIN: MainContent -->
+<main class="max-w-7xl mx-auto px-6 py-16 md:py-24">
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20 items-start">
+<!-- BEGIN: StickyLeftSidebar -->
+<aside class="lg:col-span-5 lg:sticky lg:top-12 space-y-12">
+<div data-purpose="header-group">
+<span class="text-brand-orange font-semibold tracking-widest text-sm uppercase mb-4 block">
+            { How MedSim Works }
+          </span>
+
+</div>
+<!-- Decorative Image matching the reference layout -->
+<div class="relative max-w-md" data-purpose="hero-image-container">
+<div class="rounded-[3rem] overflow-hidden aspect-[4/5] relative">
+<!-- Representing a surgical professional or student using the platform -->
+<img alt="Anatomical diagram of the human torso and internal organs" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida/ADBb0ugedp8oryXx8_wnLwwsQIhxWPkOgsRA77irNJRv8qS_oN9RhyklXaWCB8aZ70_Tz1ZGO5uDBiGY_aA2X8XCJKFVOlSG4K_1FVTD71R377WqdE4bmCX_UqcPymLxy_r0lZNNO5rsEafK2QFz6Mqpl_6disVls5T1wa_S-uw6jWuPIpk3wnrGjcZ-gMXLHlDy5BDIJo6k7S0PlXrS6UC_33hf-whvGYvYUzRqHqsbMApJvaM315ahDpRd79ogaQF_CNXtBZxcYdf0ndU">
+
+</div>
+<!-- Rounded accent cut-out effect -->
+
+</div>
+</aside>
+<!-- END: StickyLeftSidebar -->
+<!-- BEGIN: TimelineSection -->
+<section class="lg:col-span-7 relative pl-4 md:pl-0" data-purpose="process-steps">
+<!-- Vertical Timeline Line -->
+<div class="timeline-line hidden md:block md:left-[11px]"></div>
+<div class="space-y-16 md:space-y-24">
+<!-- Step 1 -->
+<div class="relative flex flex-col md:flex-row gap-8 items-start group" id="step-1">
+<!-- Timeline Marker -->
+<div class="absolute -left-[27px] md:-left-[6px] top-2 z-10">
+<div class="w-6 h-6 rounded-full border-4 border-white bg-brand-orange shadow-md flex items-center justify-center">
+<div class="w-1.5 h-1.5 bg-white rounded-full"></div>
+</div>
+</div>
+<div class="flex gap-6 items-start">
+<span class="text-7xl font-bold text-brand-orange leading-none opacity-90 transition-transform group-hover:scale-110 duration-300">1</span>
+<div class="pt-2">
+<h3 class="text-2xl md:text-3xl font-bold text-brand-surface mb-4">You open MedSim in any browser</h3>
+<p class="text-slate-600 text-lg leading-relaxed max-w-lg">
+                  You land on the home page, hit Launch Experience and a 3D brain model loads on screen. No download, no install.
+                </p>
+<div class="mt-6 md:hidden">
+<img alt="Step 1 Visual" class="rounded-xl shadow-sm border border-slate-100" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBX1m7E0BZpDpELSK29pXKTxoDPUE-Rw1v_DL-SCQkre_8KP2hEBRYfiFrHhmsPpEH64_H6yMCdt8XXoV3NfnN2nMp87VnVAxO_lgt7gKO5y-XfoX-Cx9z7w9HV1aX_OzcwQ3o3Gec4XZ5Bf6AOqNmGjWFLZtYgBHDoc2XA7Opr-J0HbiIzLmc9l3LXQ61sy4-goAzioPg8zBi3a854kJpecWi6RrETw_oywO8-Ek9EbkrvLxlRoiHyWm9woNM7vwmwFICjKDJMs9_E">
+</div>
+</div>
+</div>
+</div>
+<!-- Step 2 -->
+<div class="relative flex flex-col md:flex-row gap-8 items-start group" id="step-2">
+<!-- Timeline Marker -->
+<div class="absolute -left-[27px] md:-left-[6px] top-2 z-10">
+<div class="w-6 h-6 rounded-full border-4 border-white bg-brand-orange shadow-md flex items-center justify-center">
+<div class="w-1.5 h-1.5 bg-white rounded-full"></div>
+</div>
+</div>
+<div class="flex gap-6 items-start">
+<span class="text-7xl font-bold text-brand-orange leading-none opacity-90 transition-transform group-hover:scale-110 duration-300">2</span>
+<div class="pt-2">
+<h3 class="text-2xl md:text-3xl font-bold text-brand-surface mb-4">Your webcam becomes your hands</h3>
+<p class="text-slate-600 text-lg leading-relaxed max-w-lg">
+                  MedSim uses your camera to track your hand movements in real time. Your right hand rotates the brain model. Your left hand acts as a scalpel and you can physically trace incision paths on the 3D model.
+                </p>
+<div class="mt-6 md:hidden">
+<img alt="Step 2 Visual" class="rounded-xl shadow-sm border border-slate-100" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCvV0CtoyjudjA1LQE-rdRzDMbjZgjNsbyPANjoz8Cj3ih2locToDpT9lcNPjZEEg6EZDL1ngRichyXkqEitnpfV_P5vlDZVF89CqLKWuTZjegLF11ZylLkpfdAfGanMfHJgGqaK2LarTn2SkM9Bww9LBZ-VAhMna7mgaj61sLoaqrYplVsH8yp75wHn7aWtSrThV3iPhrBanEuoB4_tT5rBFtiFpDrF7K8NHdtwuogmh1nhgb1seo2kbQi6bH7Z1eHjXEBl6EalI_i">
+</div>
+</div>
+</div>
+</div>
+<!-- Step 3 -->
+<div class="relative flex flex-col md:flex-row gap-8 items-start group" id="step-3">
+<!-- Timeline Marker -->
+<div class="absolute -left-[27px] md:-left-[6px] top-2 z-10">
+<div class="w-6 h-6 rounded-full border-4 border-white bg-brand-orange shadow-md flex items-center justify-center">
+<div class="w-1.5 h-1.5 bg-white rounded-full"></div>
+</div>
+</div>
+<div class="flex gap-6 items-start">
+<span class="text-7xl font-bold text-brand-orange leading-none opacity-90 transition-transform group-hover:scale-110 duration-300">3</span>
+<div class="pt-2">
+<h3 class="text-2xl md:text-3xl font-bold text-brand-surface mb-4">You speak to navigate anatomy</h3>
+<p class="text-slate-600 text-lg leading-relaxed max-w-lg">
+                  You say 'select lingual' and the camera automatically zooms to that part of the brain and highlights it. You can ask 'what is this?' and the AI explains it to you out loud.
+                </p>
+<div class="mt-6 md:hidden">
+<img alt="Step 3 Visual" class="rounded-xl shadow-sm border border-slate-100" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAjFEDjwP-GEbwldjueCeiVRtt0DJmRKtAWMvHJqlPLQvevj-u3RX00y1QlWaqsmQGhdC7BQnrBgfVu1RxUTWJuzfD3v_TV7I7fFQtUw_TDkT3swukmSTOkCMysLnlIQwGPvqRkw2eXPpeIaW5qF5-0_3yJYdX2GHTLwSSFnW1W6evySgbxeDAZjm2Q1PXuKsI2VGheYMDRU30Bljanr-KkSq8vP_hywkt9LO7OTaKr83z4T013DYGUmQVAvmed8pFIYohrn4hPdpOY">
+</div>
+</div>
+</div>
+</div>
+<!-- Step 4 -->
+<div class="relative flex flex-col md:flex-row gap-8 items-start group" id="step-4">
+<!-- Timeline Marker -->
+<div class="absolute -left-[27px] md:-left-[6px] top-2 z-10">
+<div class="w-6 h-6 rounded-full border-4 border-white bg-brand-orange shadow-md flex items-center justify-center">
+<div class="w-1.5 h-1.5 bg-white rounded-full"></div>
+</div>
+</div>
+<div class="flex gap-6 items-start">
+<span class="text-7xl font-bold text-brand-orange leading-none opacity-90 transition-transform group-hover:scale-110 duration-300">4</span>
+<div class="pt-2">
+<h3 class="text-2xl md:text-3xl font-bold text-brand-surface mb-4">You get AI feedback</h3>
+<p class="text-slate-600 text-lg leading-relaxed max-w-lg">
+                  After a procedure, the AI evaluates your performance and gives you instant feedback, similar to having a senior surgeon watching over your shoulder.
+                </p>
+<div class="mt-6 md:hidden">
+<img alt="Step 4 Visual" class="rounded-xl shadow-sm border border-slate-100" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA5QMGhFohE4ZuYSf9Y3kEoYdoXqxRQe110t1JwE34Jo9u6MLo5P4pgjG3HKeYYgrC7rrsq7CbcC9n6lHcd4MeD98QIyorhjkU9LzFiPLDWSQZbqL9Fl6iyPHqXolj_FFe5ahthr7HynUkgwYqAjmXGTmb5TkvTGHGx0TXze4hvQYckAR7fMLzwRy4TRCGqg3jxCY-73O1owqa7DRSCoJDkktMYhUttt4BOBn1d3mh3A2d0sDFZ7TY7IhecZXl4Nw1ZrAC8PSwWWIYn">
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- END: TimelineSection -->
+</div>
+</main>
+<!-- END: MainContent -->
+<!-- BEGIN: FooterCTA -->
+
+<!-- END: FooterCTA -->
+
+
+</body></html>

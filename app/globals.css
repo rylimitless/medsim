@@ -1,44 +1,124 @@
 @import "tailwindcss";
 
+/* ─── Light mode (default) ─────────────────────────── */
 :root {
-    --background: #ffffff;
-    --foreground: #171717;
+    --background: #f4f6fc;
+    --background-deep: #ebedf8;
+    --foreground: #0b1326;
+
+    --surface-container-lowest: #ffffff;
+    --surface-container-low: #f0f2fa;
+    --surface-container: #e8ebf4;
+    --surface-container-high: #dde0ec;
+    --surface-container-highest: #d1d5e8;
+    --surface-bright: #ffffff;
+    --surface-variant: #e0e3f0;
+
+    --primary: #2d5ea2;
+    --primary-container: #d6e3ff;
+    --on-primary: #ffffff;
+    --on-primary-container: #001b3d;
+
+    --secondary: #006879;
+    --secondary-container: #b4ebff;
+    --on-secondary: #ffffff;
+
+    --tertiary: #bb1824;
+    --tertiary-container: #bb1824;
+    --on-tertiary: #ffffff;
+    --on-tertiary-container: #ffffff;
+
+    --on-surface: #0b1326;
+    --on-surface-variant: #424750;
+    --on-surface-muted: #73777f;
+
+    --outline: #73777f;
+    --outline-variant: #c3c6d2;
+
+    --error: #ba1a1a;
+    --error-container: #ffdad6;
+
+    --nav-bg: rgba(244, 246, 252, 0.88);
+    --glass-bg: rgba(255, 255, 255, 0.75);
+    --glass-border: rgba(195, 198, 210, 0.5);
+    --card-bg: #ffffff;
+    --card-border: rgba(195, 198, 210, 0.5);
+}
+
+/* ─── Dark mode ─────────────────────────────────────── */
+.dark {
+    --background: #0b1326;
+    --background-deep: #060e20;
+    --foreground: #dae2fd;
+
+    --surface-container-lowest: #060e20;
+    --surface-container-low: #131b2e;
+    --surface-container: #171f33;
+    --surface-container-high: #222a3d;
+    --surface-container-highest: #2d3449;
+    --surface-bright: #31394d;
+    --surface-variant: #2d3449;
+
+    --primary: #a9c7ff;
+    --primary-container: #2e5fa3;
+    --on-primary: #003063;
+    --on-primary-container: #c8daff;
+
+    --secondary: #a2e7ff;
+    --secondary-container: #004e5f;
+    --on-secondary: #003642;
+
+    --tertiary: #ffb3ae;
+    --tertiary-container: #bb1824;
+    --on-tertiary: #68000b;
+    --on-tertiary-container: #ffcdc9;
+
+    --on-surface: #dae2fd;
+    --on-surface-variant: #c3c6d2;
+    --on-surface-muted: #8d919c;
+
+    --outline: #8d919c;
+    --outline-variant: #424750;
+
+    --error: #ffb4ab;
+    --error-container: #93000a;
+
+    --nav-bg: rgba(6, 14, 32, 0.85);
+    --glass-bg: rgba(23, 31, 51, 0.8);
+    --glass-border: rgba(66, 71, 80, 0.5);
+    --card-bg: rgba(23, 31, 51, 0.6);
+    --card-border: rgba(66, 71, 80, 0.4);
 }
 
 @theme inline {
     --color-background: var(--background);
     --color-foreground: var(--foreground);
-    --color-primary: #2b6cee;
-    --color-background-light: #f6f6f8;
-    --color-background-dark: #080a0f;
     --font-sans: var(--font-geist-sans);
     --font-mono: var(--font-geist-mono);
-    --font-display: "Space Grotesk", sans-serif;
-    --font-serif: "Playfair Display", serif;
+    --font-jetbrains: var(--font-jetbrains-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-    :root {
-        --background: #0a0a0a;
-        --foreground: #ededed;
-    }
+/* Force Tailwind v4 dark: variants to use .dark class, not OS media query */
+@variant dark (&:where(.dark, .dark *));
+
+html {
+    scroll-behavior: smooth;
 }
 
 body {
     background: var(--background);
     color: var(--foreground);
-    font-family: var(--font-display);
+    font-family: var(--font-sans);
+    cursor: crosshair;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+input, button, a, [role="button"] {
+    cursor: crosshair;
 }
 
 .material-symbols-outlined {
-    font-variation-settings:
-        "FILL" 0,
-        "wght" 500,
-        "GRAD" 0,
-        "opsz" 24;
-}
-
-.material-symbols-outlined {
+    font-variation-settings: "FILL" 0, "wght" 500, "GRAD" 0, "opsz" 24;
     font-family: "Material Symbols Outlined";
     font-weight: normal;
     font-style: normal;
@@ -52,16 +132,123 @@ body {
     direction: ltr;
 }
 
-.heading-green {
-    color: #34a85a;
+/* Glass panel — adapts to theme */
+.glass-panel {
+    backdrop-filter: blur(24px);
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    transition: background 0.2s ease, border-color 0.2s ease;
 }
 
-.btn-blue {
-    background-color: #4682b4;
-    border-color: #4682b4;
+.glass-card {
+    backdrop-filter: blur(16px);
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    transition: background 0.2s ease, border-color 0.2s ease;
 }
 
-.btn-blue:hover {
-    background-color: #4682b4;
-    border-color: #4682b4;
+/* Surgical red glow — same in both modes */
+.red-accent-glow {
+    box-shadow: 0 0 15px rgba(187, 24, 36, 0.4);
+}
+
+/* Label mono — JetBrains Mono */
+.label-mono {
+    font-family: var(--font-jetbrains-mono, "JetBrains Mono", monospace);
+    font-size: 12px;
+    line-height: 16px;
+    letter-spacing: 0.05em;
+    font-weight: 500;
+}
+
+/* Surgical CTA button */
+.btn-surgical {
+    background-color: #bb1824;
+    border: 1px solid #bb1824;
+    color: #ffffff;
+}
+
+.btn-surgical:hover {
+    filter: brightness(1.12);
+}
+
+.vertical-text {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+}
+
+/* ─── Nav / footer hover links (avoids inline JS handlers) */
+.nav-link { color: var(--on-surface-muted); }
+.nav-link:hover { color: var(--primary); }
+.footer-link { color: var(--on-surface-muted); }
+.footer-link:hover { color: var(--foreground); }
+
+/* ─── Theme toggle button ────────────────────────────── */
+.theme-toggle:hover {
+    border-color: var(--primary);
+    color: var(--foreground);
+}
+
+/* ─── DESIGN.md: Primary action button (Medical Blue) ── */
+.btn-primary {
+    background-color: var(--primary);
+    color: var(--on-primary);
+    border: 1px solid var(--primary);
+    border-radius: 4px;
+    box-shadow: 0 0 12px rgba(45, 94, 162, 0.25);
+    transition: filter 0.15s ease, box-shadow 0.15s ease;
+}
+.btn-primary:hover {
+    filter: brightness(1.1);
+    box-shadow: 0 0 18px rgba(45, 94, 162, 0.4);
+}
+
+/* ─── DESIGN.md: Ghost button ───────────────────────── */
+.btn-ghost {
+    background: transparent;
+    border: 1px solid var(--primary);
+    color: var(--primary) !important;   /* !important beats inline style on default */
+    border-radius: 4px;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+.btn-ghost:hover {
+    background: var(--primary);
+    color: var(--on-primary) !important;
+}
+
+/* ─── DESIGN.md: HUD overlay panel (Overlay Layer) ──── */
+.hud-panel {
+    backdrop-filter: blur(24px);
+    background-color: rgba(23, 31, 51, 0.20);
+    border: 1px solid rgba(66, 71, 80, 0.5);
+    border-radius: 8px;
+}
+
+/* ─── DESIGN.md: Status dot (fully circular) ─────────── */
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 9999px;
+}
+.status-dot-live { background: #00d2fd; box-shadow: 0 0 6px rgba(0, 210, 253, 0.6); }
+.status-dot-warn { background: #bb1824; box-shadow: 0 0 6px rgba(187, 24, 36, 0.6); }
+.status-dot-ok   { background: #a2e7ff; }
+
+/* ─── DESIGN.md: Primary interaction glow ────────────── */
+.primary-glow {
+    box-shadow: 0 0 15px rgba(46, 95, 163, 0.4);
+}
+
+/* ─── DESIGN.md: Active input focus (Cyan Surge border) */
+.input-field {
+    background: var(--surface-container-low);
+    border: 1px solid var(--outline-variant);
+    border-radius: 4px;
+    color: var(--foreground);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.input-field:focus {
+    outline: none;
+    border-color: var(--secondary);
+    box-shadow: 0 0 8px rgba(0, 210, 253, 0.3);
 }

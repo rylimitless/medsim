@@ -8,6 +8,7 @@ import React, {
   useState,
   useMemo,
 } from "react";
+import Link from "next/link";
 import { Canvas, useLoader, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
@@ -883,22 +884,41 @@ function CameraFocusController({
 
 function TopBar({ onReset }: { onReset: () => void }) {
   return (
-    <div className="pointer-events-auto absolute left-6 right-6 top-4 flex items-center justify-between rounded-2xl bg-black/40 px-4 py-3 text-white shadow-lg backdrop-blur">
-      <div className="flex items-center gap-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500/20">
-          <span className="text-lg">🧠</span>
+    <div className="pointer-events-auto absolute left-6 right-6 top-4 flex items-center justify-between px-4 py-3 text-[#dae2fd] shadow-lg hud-panel">
+      <div className="flex items-center gap-4">
+        {/* Logo */}
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center bg-[#bb1824] red-accent-glow" style={{ borderRadius: "4px" }}>
+            <span className="material-symbols-outlined text-white text-xl">deployed_code</span>
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-[#dae2fd]">MedSim</p>
+            <p className="label-mono text-[#8d919c] text-[10px] tracking-widest uppercase">Simulation</p>
+          </div>
         </div>
-        <div>
-          <p className="text-sm font-semibold">MedSim</p>
-          <p className="text-xs text-white/60">v1.0</p>
-        </div>
+        {/* Divider */}
+        <div className="h-5 w-px" style={{ background: "rgba(66,71,80,0.7)" }} />
+        {/* Back link */}
+        <Link
+          href="/"
+          className="label-mono text-[10px] tracking-widest uppercase flex items-center gap-1.5 transition-colors duration-150"
+          style={{ color: "#8d919c" }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.color = "#a9c7ff"; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.color = "#8d919c"; }}
+        >
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M19 12H5M12 5l-7 7 7 7" />
+          </svg>
+          Back
+        </Link>
       </div>
       <div className="flex items-center gap-2">
         <button
           onClick={onReset}
-          className="rounded-lg bg-white/10 px-3 py-2 text-xs font-medium text-white/70 hover:bg-white/20"
+          className="btn-ghost px-3 py-1.5 label-mono text-[10px] tracking-widest uppercase transition-all"
+          style={{ borderColor: "rgba(169,199,255,0.3)", color: "#a9c7ff", borderRadius: "4px" }}
         >
-          Reset scene
+          Reset Scene
         </button>
       </div>
     </div>
@@ -907,11 +927,12 @@ function TopBar({ onReset }: { onReset: () => void }) {
 
 function VitalsCard() {
   return (
-    <div className="pointer-events-auto rounded-2xl bg-black/50 p-4 text-white shadow-lg backdrop-blur">
-      <p className="text-xs font-semibold text-white/70">VITALS</p>
+    <div className="pointer-events-auto hud-panel p-4 text-[#dae2fd] shadow-lg">
+      <p className="label-mono text-[10px] text-[#8d919c] tracking-widest uppercase">Vitals</p>
       <div className="mt-3 flex items-end justify-between">
-        <div className="text-lg font-semibold">72 BPM</div>
-        <div className="rounded-full bg-emerald-500/20 px-3 py-1 text-[11px] text-emerald-300">
+        <div className="text-lg font-semibold text-[#dae2fd]">72 BPM</div>
+        {/* DESIGN.md: status chip filled with secondary (cyan) = normal/live state */}
+        <div className="px-3 py-1 label-mono text-[10px] text-[#003642] tracking-widest" style={{ background: "#a2e7ff", borderRadius: "9999px" }}>
           STABLE
         </div>
       </div>
@@ -926,15 +947,13 @@ function VoiceCommandList() {
   ];
 
   return (
-    <div className="pointer-events-auto rounded-2xl bg-black/50 p-4 text-white shadow-lg backdrop-blur">
-      <p className="mb-3 text-sm font-semibold">Voice Commands</p>
+    <div className="pointer-events-auto hud-panel p-4 text-[#dae2fd] shadow-lg">
+      <p className="mb-3 label-mono tracking-widest uppercase text-[10px] text-[#8d919c]">Voice Commands</p>
       <div className="space-y-2">
         {commands.map((cmd) => (
-          <div key={cmd.action} className="rounded-lg bg-white/5 px-3 py-2">
-            <p className="mb-1 text-[10px] font-medium uppercase text-white/50">
-              {cmd.action}
-            </p>
-            <p className="text-xs text-white/80">&quot;{cmd.example}&quot;</p>
+          <div key={cmd.action} className="px-3 py-2" style={{ background: "rgba(11,19,38,0.5)", border: "1px solid rgba(66,71,80,0.4)", borderRadius: "4px" }}>
+            <p className="mb-1 label-mono text-[10px] uppercase text-[#8d919c] tracking-widest">{cmd.action}</p>
+            <p className="text-xs text-[#c3c6d2]">&quot;{cmd.example}&quot;</p>
           </div>
         ))}
       </div>
@@ -1134,27 +1153,25 @@ function VoiceControlPanel() {
   } = useVoiceControlStore();
 
   return (
-    <div className="pointer-events-auto absolute bottom-6 left-6 w-80 rounded-2xl bg-black/50 p-4 text-white shadow-lg backdrop-blur">
+    <div className="pointer-events-auto absolute bottom-6 left-6 w-80 hud-panel p-4 text-[#dae2fd] shadow-lg">
       <div className="flex items-center justify-between">
-        <p className="text-xs font-semibold text-white/70">VOICE CONTROL</p>
-        <div
-          className={`h-2 w-2 rounded-full ${isConnected ? "bg-emerald-400" : "bg-red-400"}`}
-        />
+        <p className="label-mono text-[10px] text-[#8d919c] tracking-widest uppercase">Voice Control</p>
+        <div className={`status-dot ${isConnected ? "status-dot-live" : "status-dot-warn"}`} />
       </div>
 
       <div className="mt-3 space-y-2">
         <div className="flex items-center justify-between">
-          <span className="text-xs text-white/60">Status</span>
+          <span className="label-mono text-[10px] text-[#8d919c] tracking-widest uppercase">Status</span>
           <div className="flex items-center gap-2">
             {isProcessing && (
               <div className="flex items-center gap-1">
-                <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-400" />
-                <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-400 delay-75" />
-                <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-400 delay-150" />
+                <div className="h-1.5 w-1.5 animate-pulse bg-[#a9c7ff]" style={{ borderRadius: "9999px" }} />
+                <div className="h-1.5 w-1.5 animate-pulse bg-[#a9c7ff] delay-75" style={{ borderRadius: "9999px" }} />
+                <div className="h-1.5 w-1.5 animate-pulse bg-[#a9c7ff] delay-150" style={{ borderRadius: "9999px" }} />
               </div>
             )}
             <span
-              className={`text-xs font-medium ${isListening ? "text-blue-300" : "text-white/70"}`}
+              className={`label-mono text-[10px] tracking-widest ${isListening ? "text-[#a9c7ff]" : "text-[#8d919c]"}`}
             >
               {isProcessing
                 ? "Processing..."
@@ -1166,52 +1183,57 @@ function VoiceControlPanel() {
         </div>
 
         {lastTranscript && (
-          <div className="rounded-lg bg-white/5 px-3 py-2">
-            <p className="mb-1 text-[10px] font-medium text-white/50">
-              REQUEST
+          <div className="border border-[#424750]/40 bg-[#0b1326]/60 px-3 py-2">
+            <p className="mb-1 label-mono text-[10px] text-[#8d919c] tracking-widest uppercase">
+              Request
             </p>
-            <p className="text-xs text-white/90">{lastTranscript}</p>
+            <p className="text-xs text-[#c3c6d2]">{lastTranscript}</p>
           </div>
         )}
 
         {lastResponse && (
-          <div className="rounded-lg bg-blue-500/10 px-3 py-2 border border-blue-500/20">
-            <p className="mb-1 text-[10px] font-medium text-blue-400/70">
-              RESPONSE
+          <div className="border border-[#2e5fa3]/40 bg-[#2e5fa3]/10 px-3 py-2">
+            <p className="mb-1 label-mono text-[10px] text-[#a9c7ff]/70 tracking-widest uppercase">
+              Response
             </p>
-            <p className="text-xs text-blue-100/90">{lastResponse}</p>
+            <p className="text-xs text-[#c8daff]/90">{lastResponse}</p>
           </div>
         )}
 
         {lastActionTaken && (
-          <div className="rounded-lg bg-green-500/10 px-3 py-2 border border-green-500/20">
-            <p className="mb-1 text-[10px] font-medium text-green-400/70">
-              ACTION TAKEN
+          <div className="border border-[#424750]/40 bg-[#171f33] px-3 py-2">
+            <p className="mb-1 label-mono text-[10px] text-[#a2e7ff]/70 tracking-widest uppercase">
+              Action Taken
             </p>
-            <p className="text-xs text-green-100/90">{lastActionTaken}</p>
+            <p className="text-xs text-[#a2e7ff]/90">{lastActionTaken}</p>
           </div>
         )}
 
         {error && (
-          <div className="rounded-lg bg-red-500/20 px-3 py-2">
-            <p className="text-xs text-red-300">{error}</p>
+          <div className="border border-[#bb1824]/40 bg-[#bb1824]/10 px-3 py-2">
+            <p className="text-xs text-[#ffb3ae]">{error}</p>
           </div>
         )}
 
         <div className="flex gap-2 pt-2">
+          {/* DESIGN.md: primary action = Medical Blue; destructive = Emergency Red */}
           <button
             onClick={isListening ? stopListening : startListening}
-            className={`flex-1 rounded-lg px-3 py-2 text-xs font-medium transition-colors ${
-              isListening
-                ? "bg-red-500/20 text-red-300 hover:bg-red-500/30"
-                : "bg-blue-500/20 text-blue-300 hover:bg-blue-500/30"
-            }`}
+            className="flex-1 px-3 py-2 label-mono text-[10px] tracking-widest uppercase transition-all"
+            style={isListening
+              ? { background: "rgba(187,24,36,0.15)", border: "1px solid rgba(187,24,36,0.5)", color: "#ffb3ae", borderRadius: "4px", boxShadow: "0 0 8px rgba(187,24,36,0.3)" }
+              : { background: "rgba(46,95,163,0.15)", border: "1px solid rgba(46,95,163,0.5)", color: "#a9c7ff", borderRadius: "4px" }
+            }
           >
             {isListening ? "Stop" : "Start"}
           </button>
+          {/* Ghost button */}
           <button
             onClick={clearHistory}
-            className="rounded-lg bg-white/10 px-3 py-2 text-xs font-medium text-white/70 hover:bg-white/20"
+            className="px-3 py-2 label-mono text-[10px] tracking-widest uppercase transition-all"
+            style={{ border: "1px solid rgba(66,71,80,0.6)", color: "#8d919c", borderRadius: "4px" }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#dae2fd"; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#8d919c"; }}
           >
             Clear
           </button>
@@ -1484,7 +1506,7 @@ export default function ModelPage() {
   }, [isThumbsUpRight, isListening, startListening, stopListening]);
 
   return (
-    <div className="relative h-screen w-screen bg-gradient-to-b from-slate-950 via-slate-900 to-black">
+    <div className="relative h-screen w-screen" style={{ background: "linear-gradient(180deg, #060e20 0%, #0b1326 50%, #060e20 100%)" }}>
       <Canvas
         camera={{ position: [0, 0, 2.6], fov: 45 }}
         gl={{ alpha: true }}
@@ -1545,19 +1567,30 @@ export default function ModelPage() {
         ref={tooltipRef}
         className="pointer-events-none absolute left-0 top-0 rounded-md bg-black/80 px-2 py-1 text-xs text-white opacity-0 shadow-lg"
       />
+      {/* Selection toast */}
       <div
-        className={`pointer-events-none absolute left-1/2 top-6 -translate-x-1/2 rounded-full bg-black/70 px-4 py-2 text-xs text-white shadow-lg transition-opacity duration-200 ${
+        className={`pointer-events-none absolute left-1/2 top-6 -translate-x-1/2 hud-panel shadow-lg transition-opacity duration-200 ${
           selectionToast.visible ? "opacity-100" : "opacity-0"
         }`}
+        style={{ padding: "6px 16px" }}
       >
-        {selectionToast.name}
+        <div className="flex items-center gap-2">
+          <div className="status-dot status-dot-live" />
+          <span className="label-mono text-[11px] text-[#dae2fd] tracking-widest uppercase">{selectionToast.name}</span>
+        </div>
       </div>
-      <video
-        ref={videoRef}
-        className="pointer-events-none absolute top-20 right-6 h-36 w-48 transform -scale-x-100 rounded-md border border-white/30 object-cover shadow-lg"
-        playsInline
-        muted
-      />
+
+      {/* Camera feed */}
+      <div className="pointer-events-none absolute top-20 right-6">
+        <p className="label-mono text-[10px] text-[#8d919c] tracking-widest uppercase mb-1.5 text-right">Camera</p>
+        <video
+          ref={videoRef}
+          className="h-36 w-48 transform -scale-x-100 object-cover shadow-lg"
+          style={{ border: "1px solid rgba(66,71,80,0.5)", borderRadius: "4px", display: "block" }}
+          playsInline
+          muted
+        />
+      </div>
     </div>
   );
 }

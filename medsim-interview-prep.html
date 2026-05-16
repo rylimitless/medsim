@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MedSim Interview Prep</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Georgia', serif;
+      font-size: 13pt;
+      line-height: 1.7;
+      color: #1a1a2e;
+      background: #fff;
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 40px 48px;
+    }
+
+    /* Cover */
+    .cover {
+      text-align: center;
+      padding: 80px 0 60px;
+      border-bottom: 3px solid #1a1a2e;
+      margin-bottom: 60px;
+      page-break-after: always;
+    }
+    .cover .tag {
+      display: inline-block;
+      font-family: 'Arial', sans-serif;
+      font-size: 10pt;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: #4a90d9;
+      border: 1px solid #4a90d9;
+      padding: 4px 14px;
+      border-radius: 20px;
+      margin-bottom: 28px;
+    }
+    .cover h1 {
+      font-size: 42pt;
+      font-weight: bold;
+      letter-spacing: -1px;
+      color: #1a1a2e;
+      margin-bottom: 12px;
+    }
+    .cover .subtitle {
+      font-size: 16pt;
+      color: #555;
+      font-style: italic;
+      margin-bottom: 40px;
+    }
+    .cover .meta {
+      font-family: 'Arial', sans-serif;
+      font-size: 10pt;
+      color: #888;
+    }
+
+    /* Section headers */
+    h2 {
+      font-size: 18pt;
+      font-weight: bold;
+      color: #1a1a2e;
+      border-left: 5px solid #4a90d9;
+      padding-left: 14px;
+      margin: 48px 0 18px;
+    }
+    h3 {
+      font-size: 13pt;
+      font-weight: bold;
+      color: #2c3e6e;
+      margin: 28px 0 8px;
+    }
+
+    p { margin-bottom: 12px; }
+
+    ul, ol {
+      padding-left: 22px;
+      margin-bottom: 14px;
+    }
+    li { margin-bottom: 6px; }
+
+    /* Call-out boxes */
+    .callout {
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin: 20px 0;
+    }
+    .callout.blue { background: #eef4fb; border-left: 4px solid #4a90d9; }
+    .callout.green { background: #edfaf2; border-left: 4px solid #27ae60; }
+    .callout.orange { background: #fff8ee; border-left: 4px solid #e67e22; }
+    .callout.red { background: #fef3f2; border-left: 4px solid #e74c3c; }
+    .callout strong { display: block; margin-bottom: 6px; font-family: 'Arial', sans-serif; font-size: 10pt; text-transform: uppercase; letter-spacing: 0.1em; }
+
+    /* Tech table */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 18px 0;
+      font-family: 'Arial', sans-serif;
+      font-size: 11pt;
+    }
+    th {
+      background: #1a1a2e;
+      color: #fff;
+      text-align: left;
+      padding: 10px 14px;
+    }
+    td {
+      padding: 9px 14px;
+      border-bottom: 1px solid #e0e0e0;
+      vertical-align: top;
+    }
+    tr:nth-child(even) td { background: #f7f9fc; }
+
+    /* Quote style for talking points */
+    .quote {
+      font-style: italic;
+      color: #2c3e6e;
+      border-left: 3px solid #4a90d9;
+      padding: 8px 18px;
+      margin: 14px 0;
+      background: #f4f8fd;
+    }
+
+    /* Step boxes */
+    .steps { counter-reset: step; }
+    .step {
+      display: flex;
+      gap: 18px;
+      margin-bottom: 20px;
+      align-items: flex-start;
+    }
+    .step-num {
+      flex-shrink: 0;
+      width: 34px;
+      height: 34px;
+      background: #4a90d9;
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Arial', sans-serif;
+      font-weight: bold;
+      font-size: 13pt;
+    }
+    .step-body { flex: 1; }
+    .step-body strong { display: block; margin-bottom: 4px; }
+
+    /* Print */
+    @media print {
+      body { padding: 30px 40px; font-size: 11pt; }
+      h2 { margin-top: 36px; }
+      .cover { padding: 60px 0 50px; }
+      .cover h1 { font-size: 36pt; }
+      .page-break { page-break-before: always; }
+    }
+
+    .divider {
+      border: none;
+      border-top: 1px solid #ddd;
+      margin: 36px 0;
+    }
+  </style>
+</head>
+<body>
+
+<!-- COVER -->
+<div class="cover">
+  <div class="tag">Interview Prep Guide</div>
+  <h1>MedSim</h1>
+  <div class="subtitle">How to talk about your project with confidence</div>
+  <div class="meta">
+    Virtual Deep-Dive Interview &nbsp;·&nbsp; 45 minutes &nbsp;·&nbsp; Business Skills + Unstructured Problem Solving
+  </div>
+</div>
+
+
+<!-- SECTION 1: THE ONE-LINER -->
+<h2>1. Start Here — Your One-Liner</h2>
+
+<p>Every answer should be anchored to this. Memorize it, say it naturally:</p>
+
+<div class="quote">
+  "MedSim is a browser-based surgical training simulator. It lets medical students and surgeons practice on a 3D anatomy model using their hands and voice — no $300,000 simulation lab required."
+</div>
+
+<p>Why this works: it states <strong>what it is</strong>, <strong>who it's for</strong>, and <strong>why it matters</strong> in two sentences. Lead with it whenever they ask "tell me about your project."</p>
+
+
+<!-- SECTION 2: THE PROBLEM -->
+<h2>2. The Problem You Solved</h2>
+
+<p>This is the most important part of the interview. They are evaluating <em>business skills</em> — so show you identified a real-world problem before writing a single line of code.</p>
+
+<div class="callout blue">
+  <strong>The Problem (say it this way)</strong>
+  According to the Journal of Surgical Research, surgical simulation labs can cost upwards of $300,000 to set up. That price puts them out of reach for most medical schools, especially outside wealthy institutions. Students end up doing their first procedures on real patients with minimal practice. That's a safety problem and an access problem.
+</div>
+
+<div class="callout green">
+  <strong>Your Solution</strong>
+  MedSim removes the hardware requirement entirely. Any student with a laptop and a webcam can open a browser and start practicing. The experience runs 100% in the browser — no downloads, no equipment.
+</div>
+
+<p><strong>Why this is good interview material:</strong> You identified a measurable gap ($300K cost), tied it to a real consequence (patient safety), and proposed an accessible alternative. That's how business thinkers talk about problems.</p>
+
+
+<!-- SECTION 3: WHO IT'S FOR -->
+<h2>3. Who It's For (Your Market)</h2>
+
+<p>They may ask "who would use this?" or "how would you monetize it?" Be ready with two clear answers:</p>
+
+<div class="steps">
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <strong>Medical Schools and Institutions</strong>
+      They need to train large cohorts of students at low cost. MedSim replaces or supplements their physical labs. You could sell it as a subscription per institution or per student seat.
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <strong>Individual Surgeons</strong>
+      Experienced surgeons need to practice rare or complex procedures before performing them in the operating room. MedSim gives them a safe environment to rehearse.
+    </div>
+  </div>
+</div>
+
+<div class="callout orange">
+  <strong>If they ask about competition</strong>
+  Say: "Existing solutions like 3D Organon or Visible Body are primarily educational viewers — you can look at anatomy, but you can't interact with it surgically. What differentiates MedSim is the hands-on simulation layer: real-time hand tracking, voice commands, and AI feedback on your performance."
+</div>
+
+
+<!-- SECTION 4: HOW IT WORKS -->
+<h2 class="page-break">4. How It Works — The Simple Version</h2>
+
+<p>Use this flow when explaining the product to a non-technical interviewer. You should be able to explain this in under 90 seconds:</p>
+
+<div class="steps">
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <strong>You open MedSim in any browser</strong>
+      You land on the home page. Hit "Launch Experience" and a 3D brain model loads on screen. No download, no install.
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <strong>Your webcam becomes your hands</strong>
+      MedSim uses your camera to track your hand movements in real time. Your right hand rotates the brain model. Your left hand acts as a scalpel — you can physically trace incision paths on the 3D model.
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <strong>You speak to navigate anatomy</strong>
+      You say "select lingual" and the camera automatically zooms to that part of the brain and highlights it. You can ask "what is this?" and the AI explains it to you out loud.
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">4</div>
+    <div class="step-body">
+      <strong>You get AI feedback</strong>
+      After a procedure, the AI evaluates your performance and gives you instant feedback — similar to having a senior surgeon watching over your shoulder.
+    </div>
+  </div>
+</div>
+
+
+<!-- SECTION 5: TECHNOLOGIES -->
+<h2>5. Technologies You Used — and WHY</h2>
+
+<p>The interview specifically asks you to talk about technologies. Don't just name them — explain the <em>reason</em> you chose each one. That's what shows engineering judgment.</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Technology</th>
+      <th>What it does in MedSim</th>
+      <th>Why you chose it</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Next.js</strong></td>
+      <td>Runs both the website and the backend server from a single codebase</td>
+      <td>Avoids building and hosting two separate systems. The same project handles what users see and the AI voice processing that happens behind the scenes.</td>
+    </tr>
+    <tr>
+      <td><strong>React Three Fiber</strong></td>
+      <td>Renders the interactive 3D brain model inside the browser</td>
+      <td>Lets you write 3D graphics in the same language as the rest of the app (React). No need to switch between two completely different systems.</td>
+    </tr>
+    <tr>
+      <td><strong>MediaPipe</strong></td>
+      <td>Tracks 21 points on each hand using the webcam, 60 times per second</td>
+      <td>Google's open-source hand tracking runs entirely in the browser — no server calls, no lag. Fast enough to feel like a real scalpel.</td>
+    </tr>
+    <tr>
+      <td><strong>Zustand</strong></td>
+      <td>Keeps the app's shared state (which mesh is selected, voice status, cut history)</td>
+      <td>Simple, lightweight. The app has multiple panels that need to react to the same events — Zustand connects them without complex setup.</td>
+    </tr>
+    <tr>
+      <td><strong>OpenRouter / Gemini</strong></td>
+      <td>Converts spoken words to text, then understands what the user meant</td>
+      <td>OpenRouter gives access to multiple AI models through one API. Using Gemini specifically because it natively supports audio input, not just text.</td>
+    </tr>
+    <tr>
+      <td><strong>PostgreSQL + pgvector</strong></td>
+      <td>Stores vector embeddings of anatomy names so voice commands can match fuzzy input</td>
+      <td>When someone says "lingual gyrus" or just "lingual," the database finds the closest match by meaning — not just exact spelling.</td>
+    </tr>
+  </tbody>
+</table>
+
+
+<!-- SECTION 6: ARCHITECTURE DIAGRAM EXPLAINED -->
+<h2>6. Explaining the Architecture Diagram</h2>
+
+<p>If they show you the architecture diagram or ask you to walk through it, use this structure:</p>
+
+<div class="callout blue">
+  <strong>How to walk through the diagram</strong>
+  "The app is split into three layers. The frontend is everything the user sees — the 3D brain, the hand tracking overlay, the voice panel. The backend is a set of AI endpoints I built — they handle converting speech to text, understanding what the user asked for, and finding the right anatomy part to zoom to. And there's a CI/CD pipeline at the bottom that automatically tests and deploys the app when I push new code."
+</div>
+
+<h3>Frontend Layer</h3>
+<ul>
+  <li><strong>Next.js</strong> — the shell that loads everything and handles page routing</li>
+  <li><strong>React Three Fiber</strong> — the 3D canvas inside the browser</li>
+  <li><strong>MediaPipe</strong> — hand tracking from webcam, runs locally</li>
+  <li><strong>Zustand</strong> — connects all the pieces so they share information</li>
+  <li><strong>Fetch API</strong> — how the frontend talks to the backend</li>
+</ul>
+
+<h3>Backend Layer (Next.js API Routes)</h3>
+<ul>
+  <li><strong>OpenRouter</strong> — AI that listens, transcribes, understands voice commands</li>
+  <li><strong>PostgreSQL + pgvector</strong> — finds the best anatomy match for what was said</li>
+  <li><strong>3D Model CDN</strong> — serves the brain model file to the browser</li>
+  <li><strong>TTS Service</strong> — AI speaks the response back to the user</li>
+  <li><strong>Session Store</strong> — tracks user progress</li>
+</ul>
+
+
+<!-- SECTION 7: AI SYSTEMS -->
+<h2 class="page-break">7. The AI Systems — What You Actually Built</h2>
+
+<p>MedSim has <strong>four distinct AI layers</strong> working together. This is what makes it technically impressive — not one AI call, but a full pipeline of coordinated AI services. Be able to explain each one.</p>
+
+<hr class="divider">
+
+<h3>AI Layer 1 — Speech-to-Text (Transcription)</h3>
+<p>When the user stops speaking, MedSim sends the audio recording to an AI via the <code>/api/voice/transcribe</code> endpoint. The AI used is <strong>Google Gemini</strong>, accessed through <strong>OpenRouter</strong> (a service that routes to multiple AI providers). Gemini is multimodal — it can process raw audio directly, not just text.</p>
+<div class="callout blue">
+  <strong>How to explain it</strong>
+  "I send the audio file to Gemini and ask it to return only the transcribed text. So 'select lingual gyrus' becomes the string 'select lingual gyrus.' I chose Gemini specifically because it natively handles audio — other models need the audio pre-converted to text first."
+</div>
+
+<hr class="divider">
+
+<h3>AI Layer 2 — Intent Classification</h3>
+<p>The transcribed text goes to a second AI call at <code>/api/voice/classify</code>. This time, Gemini is given a structured prompt that asks it to interpret what the user wants to do. The AI returns a JSON object with:</p>
+<ul>
+  <li><strong>action</strong> — one of: zoom, rotate, highlight, select, query</li>
+  <li><strong>targetMesh</strong> — the anatomy name the user mentioned</li>
+  <li><strong>parameters</strong> — any modifiers (zoom level, rotation degrees, color)</li>
+  <li><strong>confidence</strong> — a score from 0 to 1 (below 0.5 = AI says "I didn't understand")</li>
+  <li><strong>response</strong> — if the action was a question, the AI answers it here</li>
+</ul>
+<div class="callout blue">
+  <strong>How to explain it</strong>
+  "I wrote a structured prompt that tells the AI: you are a voice classifier for a 3D anatomy tool. Parse this sentence and return a JSON object. If the user asks a question, answer it. If they say 'select lingual,' return action=select and targetMesh=lingual. The confidence score lets me decide whether to act or ask the user to repeat themselves."
+</div>
+
+<hr class="divider">
+
+<h3>AI Layer 3 — Semantic Search (Vector Embeddings)</h3>
+<p>After classification, the anatomy name from the AI gets sent to <code>/api/voice/match</code>. This is where <strong>vector embeddings</strong> and <strong>PostgreSQL with pgvector</strong> come in.</p>
+<p>Every anatomy part in the 3D model has been pre-converted into a <em>vector</em> — a list of numbers that represents the meaning of that word. When the user says something, their phrase is also converted to a vector using <strong>Qwen3 embedding model</strong>. The database then finds the anatomy part whose vector is mathematically closest — this is called <em>cosine similarity search</em>.</p>
+<div class="callout green">
+  <strong>Why this matters — say it this way</strong>
+  "The problem is that the user might say 'lingual' but the 3D model's mesh is named 'lingual gyrus' or 'G_and_S_transv_frontopol' — the exact names are technical and inconsistent. Vector search solves this: instead of looking for an exact text match, it finds the closest meaning. So even if the user says something slightly different, the system still finds the right part."
+</div>
+
+<hr class="divider">
+
+<h3>AI Layer 4 — Text-to-Speech (The AI Talks Back)</h3>
+<p>After every command, MedSim speaks a response out loud using the browser's built-in <strong>Web Speech API</strong>. If the user asked a question ("What is this?"), the answer from Gemini gets read aloud. If they issued a command, the app confirms it verbally: "Selected lingual gyrus."</p>
+<div class="callout blue">
+  <strong>How to explain it</strong>
+  "The app is fully conversational — you speak to it and it speaks back. This makes it hands-free during a simulation, which matters because the user's hands are already occupied controlling the model."
+</div>
+
+<hr class="divider">
+
+<h3>How the Gesture Triggers the AI</h3>
+<p>The AI pipeline doesn't start with a button click — it starts with a <strong>hand gesture</strong>. MediaPipe watches the webcam 60 times per second. When it detects a thumbs-up with the right hand, MedSim automatically starts recording the microphone. When the thumbs-up is lowered, recording stops and the entire AI pipeline runs.</p>
+<div class="callout orange">
+  <strong>Why this design decision matters</strong>
+  "I didn't want a button because the user's hands are inside the simulation. A thumbs-up is a natural, universal gesture — it's intuitive and keeps the experience immersive. The hand never needs to leave the 3D space to interact with the UI."
+</div>
+
+<hr class="divider">
+
+<h3>The Complete AI Pipeline — End to End</h3>
+<div class="steps">
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <strong>Thumbs-up detected (MediaPipe)</strong>
+      Webcam feeds 60fps into MediaPipe. Gesture = thumbs up → microphone recording begins.
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <strong>Audio captured (VoiceCaptureService)</strong>
+      Browser records microphone audio into chunks. Thumbs-up lowered → recording stops, audio blob assembled.
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <strong>Transcription (Gemini via OpenRouter)</strong>
+      Audio sent to <code>/api/voice/transcribe</code>. Gemini returns plain text of what was said.
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">4</div>
+    <div class="step-body">
+      <strong>Intent Classification (Gemini)</strong>
+      Text sent to <code>/api/voice/classify</code>. AI returns: action type, target anatomy name, confidence score, and answer (if a question was asked). Message is also stored in the database with an embedding.
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">5</div>
+    <div class="step-body">
+      <strong>Semantic Mesh Match (pgvector)</strong>
+      Anatomy name sent to <code>/api/voice/match</code>. PostgreSQL finds the closest matching 3D mesh by vector similarity.
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">6</div>
+    <div class="step-body">
+      <strong>3D Action Executed (React Three Fiber)</strong>
+      The matched mesh is highlighted in blue, camera animates to it. If a question was asked, the answer is spoken aloud via TTS.
+    </div>
+  </div>
+</div>
+
+<!-- SECTION 8 (old 7): THE VOICE PIPELINE SUMMARY -->
+<h2>8. How to Describe the AI in One Minute</h2>
+
+<p>Use this when an interviewer asks "how does the AI work?" — give them the 60-second version first, then offer to go deeper:</p>
+
+<div class="quote">
+  "MedSim has four AI layers. First, when you give a thumbs-up, it records your voice and sends it to Google Gemini to transcribe it to text. Second, that text goes to Gemini again, which classifies what you want to do — zoom, select, ask a question — and which brain structure you're referring to. Third, that anatomy name gets matched to the actual 3D mesh using vector search in a PostgreSQL database — so even if you say it slightly differently, it still finds the right part. Finally, the app speaks the response back to you using the browser's speech engine. The whole pipeline takes about a second."
+</div>
+
+
+<!-- SECTION 9: PROBLEM SOLVING QUESTIONS -->
+<h2>9. Unstructured Problem-Solving Questions to Prepare For</h2>
+
+<p>The interview focuses on <em>unstructured problem solving</em>. These are open-ended questions with no right answer — they want to see how you think. Here are likely questions with how to approach them:</p>
+
+<hr class="divider">
+
+<h3>"What was the hardest problem you solved building MedSim?"</h3>
+<div class="callout blue">
+  <strong>Good answer</strong>
+  "Connecting hand tracking to the 3D model in real time. MediaPipe gives me 21 landmark points per hand, but I had to translate those 2D screen coordinates into 3D world coordinates that matched the brain model's space — and do it fast enough that it felt like the hand was actually touching the model. I had to deal with depth estimation, bounding box collision detection, and smoothing the rotation so it didn't feel jittery."
+</div>
+
+<hr class="divider">
+
+<h3>"If you had more time, what would you build next?"</h3>
+<div class="callout blue">
+  <strong>Good answer</strong>
+  "I'd add a performance scoring system. Right now the scalpel draws cut lines on the model, but there's no evaluation — did the student cut in the right place? With the right pressure? I'd store each cut path, compare it to a reference path for that procedure, and generate a score with specific feedback. That closes the learning loop."
+</div>
+
+<hr class="divider">
+
+<h3>"How would you make this a real business?"</h3>
+<div class="callout blue">
+  <strong>Good answer</strong>
+  "I'd start with medical schools — they have a budget for simulation equipment and a clear problem to solve. I'd offer it as a SaaS subscription per student seat, so the cost scales with their enrollment. The data angle is also valuable: with enough users, you can track which procedures students struggle with most and sell those insights back to curriculum designers."
+</div>
+
+<hr class="divider">
+
+<h3>"What would you do differently if you started over?"</h3>
+<div class="callout blue">
+  <strong>Good answer</strong>
+  "I'd invest earlier in a proper database schema for tracking user sessions. Right now the app can simulate a procedure, but it doesn't remember what you did last time. Persistent progress tracking is what turns a demo into a training tool — I'd build that foundation from day one."
+</div>
+
+<hr class="divider">
+
+<h3>"What tradeoffs did you make?"</h3>
+<div class="callout blue">
+  <strong>Good answer</strong>
+  "Accuracy vs. accessibility. A dedicated surgical simulator with haptic gloves and a $50K workstation would feel more realistic. I chose the opposite extreme — make it run on any laptop with a webcam. That means the interaction is less precise, but the reach is massively wider. For a training tool aimed at access, I think that's the right tradeoff."
+</div>
+
+
+<!-- SECTION 9: INTERVIEW STRUCTURE TIPS -->
+<h2 class="page-break">10. How to Structure Your 45 Minutes</h2>
+
+<p>The interview is a "virtual deep dive" — they will ask you to go deep on specific areas. Here is how to think about pacing:</p>
+
+<div class="steps">
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <strong>Opening (first 2–3 minutes)</strong>
+      Give your one-liner. State the problem. State your solution. Don't wait for them to drag it out of you — set the frame confidently at the start.
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <strong>Product walkthrough (5–8 minutes)</strong>
+      Walk through how it works from the user's perspective. Home page → launch → 3D model → hand tracking → voice command → AI response. Keep it concrete and sequential.
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <strong>Technology deep dive (10–15 minutes)</strong>
+      Let them steer this. They'll ask "how does the hand tracking work?" or "how did you handle the voice pipeline?" — be ready to go deep on each technology using the WHY framing from Section 5.
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">4</div>
+    <div class="step-body">
+      <strong>Problem solving (15–20 minutes)</strong>
+      This is open-ended. They might give you a hypothetical ("how would you scale this to 10,000 students?"). Think out loud. They're evaluating process, not answers.
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">5</div>
+    <div class="step-body">
+      <strong>Close (last 2–3 minutes)</strong>
+      Ask one smart question. Example: "What's the most common mistake you see builders make when they try to take a technical project to market?"
+    </div>
+  </div>
+</div>
+
+
+<!-- SECTION 10: ONE-PAGER CHEATSHEET -->
+<h2>11. Quick-Reference Cheat Sheet</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>If they ask...</th>
+      <th>Lead with...</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Tell me about your project</td>
+      <td>"MedSim is a browser-based surgical simulator — no $300K lab required."</td>
+    </tr>
+    <tr>
+      <td>What problem does it solve?</td>
+      <td>"Simulation labs cost $300K+ and are inaccessible to most students."</td>
+    </tr>
+    <tr>
+      <td>Who would use this?</td>
+      <td>"Medical schools replacing labs, and surgeons rehearsing rare procedures."</td>
+    </tr>
+    <tr>
+      <td>What technologies did you use?</td>
+      <td>"Next.js for the full stack, Three.js for 3D, MediaPipe for hand tracking, Gemini for voice AI."</td>
+    </tr>
+    <tr>
+      <td>What was hardest?</td>
+      <td>"Mapping 2D hand coordinates to 3D model space in real time."</td>
+    </tr>
+    <tr>
+      <td>What's next?</td>
+      <td>"Performance scoring — evaluate each cut and give feedback, closing the learning loop."</td>
+    </tr>
+    <tr>
+      <td>How would you monetize it?</td>
+      <td>"SaaS subscription per student seat, starting with medical schools."</td>
+    </tr>
+    <tr>
+      <td>What would you change?</td>
+      <td>"Build user session persistence from day one — that's what turns a demo into a training tool."</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="callout red">
+  <strong>Things to avoid saying</strong>
+  <ul>
+    <li>Don't say "it's just a side project" — it's a product with a real business case.</li>
+    <li>Don't over-explain code — lead with impact, go technical only when asked.</li>
+    <li>Don't say "I haven't finished X yet" — say "the next version would include X because..."</li>
+    <li>Don't guess at numbers you don't know — it's fine to say "I'd need to research the exact market size."</li>
+  </ul>
+</div>
+
+<hr class="divider">
+
+<p style="text-align:center; color:#888; font-family:Arial, sans-serif; font-size:10pt; margin-top:40px;">
+  MedSim Interview Prep &nbsp;·&nbsp; Good luck — you built something genuinely impressive.
+</p>
+
+</body>
+</html>
