@@ -73,7 +73,8 @@ export class TextToSpeechService extends EventEmitter<TTSEvents> {
 
     utterance.onerror = (event) => {
       this.isSpeaking = false;
-      console.error('[TTS] Error:', event);
+      if (event.error === 'interrupted' || event.error === 'canceled') return;
+      console.error('[TTS] Error:', event.error);
     };
 
     this.synthesis.speak(utterance);

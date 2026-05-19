@@ -1413,7 +1413,12 @@ export default function ModelPage() {
 
       streamRef.current = stream;
       video.srcObject = stream;
-      await video.play();
+      try {
+        await video.play();
+      } catch (e) {
+        if (e instanceof DOMException && e.name === 'AbortError') return;
+        throw e;
+      }
 
       const vision = await FilesetResolver.forVisionTasks(
         "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm",
